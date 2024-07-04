@@ -1,8 +1,22 @@
 from fastapi import FastAPI
+from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel
 import uvicorn
 
 server = FastAPI()
+
+origins = [
+    "http://localhost:3000",
+    "https://chroma-key-front-spbb34bsma-dt.a.run.app",
+]
+
+server.add_middleware(
+    CORSMiddleware,
+    allow_origins=origins,
+    allow_credentials=True,
+    allow_methods=["get", "post"],
+    allow_headers=["*"]
+)
 
 # リクエストボディの型定義
 class Param(BaseModel):
