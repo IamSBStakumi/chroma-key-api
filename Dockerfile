@@ -16,7 +16,7 @@ FROM tiangolo/uvicorn-gunicorn-fastapi:python3.11-slim AS runner
 WORKDIR /app
 
 RUN addgroup --system --gid 1001 python
-RUN adduser --system --uid --ingroup python api
+RUN adduser --system --uid 1001 api
 
 COPY --from=builder /app/chroma_key_api /app/chroma_key_api
 
