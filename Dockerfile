@@ -26,4 +26,4 @@ USER api
 
 EXPOSE 8080
 
-CMD ["uvicorn", "chroma-key-api.main:app", "--host", "0.0.0.0", "--port", "8080"]
+CMD ["uvicorn", "chroma-key-api.main:server", "--host", "0.0.0.0", "--port", "8080"]
