@@ -8,7 +8,7 @@ COPY pyproject.toml poetry.lock ./
 
 RUN poetry install --no-dev
 
-COPY chroma_key_api ./
+COPY chroma_key_api ./chroma_key_api
 
 FROM builder AS runner
 
@@ -17,14 +17,12 @@ WORKDIR /app
 RUN addgroup --system --gid 1001 python
 RUN adduser --system --uid 1001 api
 
-COPY --from=builder /app ./
+COPY --from=builder /app/chroma_key_api /app/chroma_key_api
 
 COPY --from=builder /usr/local/lib/python3.11/site-packages /usr/local/lib/python3.11/site-packages
 COPY --from=builder /usr/local/bin /usr/local/bin
 
 USER api
-
-COPY --from=builder /app ./
 
 EXPOSE 8080
 
