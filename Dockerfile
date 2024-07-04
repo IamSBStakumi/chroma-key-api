@@ -6,9 +6,8 @@ WORKDIR /app
 
 COPY pyproject.toml poetry.lock ./
 
-RUN poetry config virtualenvs.create false
-
-RUN poetry install --no-dev
+RUN poetry config virtualenvs.create false \
+    && poetry install --no-dev
 
 COPY chroma_key_api ./chroma_key_api
 
@@ -17,7 +16,7 @@ FROM tiangolo/uvicorn-gunicorn-fastapi:python3.11-slim AS runner
 WORKDIR /app
 
 RUN addgroup --system --gid 1001 python
-RUN adduser --system --uid 1001 api
+RUN adduser --system --uid --ingroup python api
 
 COPY --from=builder /app/chroma_key_api /app/chroma_key_api
 
