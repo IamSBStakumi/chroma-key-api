@@ -1,0 +1,7 @@
+Dockerfile
+.dockerignore
+
+README.md
+.vscode
+.pre-commit-config.yaml
+.venv
