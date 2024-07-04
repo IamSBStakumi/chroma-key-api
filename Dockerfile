@@ -19,7 +19,7 @@ WORKDIR /app
 RUN addgroup --system --gid 1001 python
 RUN adduser --system --uid 1001 api
 
-COPY --from=builder /app/chroma_key_api /app/chroma_key_api
+COPY --from=builder /app /app
 
 COPY --from=builder /usr/local/lib/python3.11/site-packages /usr/local/lib/python3.11/site-packages
 COPY --from=builder /usr/local/bin /usr/local/bin
