@@ -1,3 +1,4 @@
+import os
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel
@@ -34,4 +35,5 @@ async def create_movie(param: Param):
     return {"message", f'{param.contrast_adjustment_value},{param.chroma_key_color},{param.chroma_key_threshold},{param.noise_removal_iterations}'}
 
 if __name__ == "__main__":
-    uvicorn.run(server, host="0.0.0.0", port=8080, log_level="debug")
+    port = int(os.getenv("PORT", 8080))
+    uvicorn.run(server, host="0.0.0.0", port=port, log_level="debug")
