@@ -5,3 +5,5 @@ README.md
 .vscode
 .pre-commit-config.yaml
 .venv
+
+**/*/__pycache__
