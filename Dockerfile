@@ -1,5 +1,6 @@
-FROM python:3.11.9-slim-bullseye AS base
+# FROM python:3.11.9-slim-bullseye AS base
 # FROM base as builder
+FROM tiangolo/uvicorn-gunicorn-fastapi:python3.11-slim
 
 RUN pip install poetry
 
@@ -28,4 +29,5 @@ COPY chroma_key_api ./
 
 EXPOSE 8080
 
-CMD ["poetry", "run", "uvicorn", "chroma-key-api.main:server", "--host", "0.0.0.0", "--port", "8080"]
+# CMD ["poetry", "run", "uvicorn", "chroma-key-api.main:server", "--host", "0.0.0.0", "--port", "8080"]
+CMD ["uvicorn", "chroma-key-api.main:server", "--host", "0.0.0.0", "--port", "8080"]
