@@ -24,7 +24,7 @@ COPY --from=builder /usr/local/bin /usr/local/bin
 
 USER api
 
-COPY --from=builder /chroma_key_api ./
+COPY --from=builder /app ./
 
 EXPOSE 8080
 
