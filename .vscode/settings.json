@@ -13,5 +13,5 @@
   "python.linting.flake8Enabled": true,
   // autoDocstring
   "autoDockstring.docstringFormat": "google",
-  "cSpell.words": ["fastapi", "isort", "uvicorn"]
+  "cSpell.words": ["fastapi", "isort", "pydantic", "uvicorn"]
 }
