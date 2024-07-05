@@ -1,5 +1,5 @@
 FROM python:3.11.9-slim-bullseye AS base
-FROM base as builder
+FROM base AS builder
 
 RUN pip install poetry
 
@@ -27,4 +27,4 @@ USER api
 
 EXPOSE 8080
 
-CMD ["poetry", "run", "uvicorn", "chroma_key_api.main:main", "--host", "0.0.0.0", "--port", "8080"]
+CMD ["poetry", "run", "uvicorn", "main.server:server", "--host", "0.0.0.0", "--port", "8080"]
