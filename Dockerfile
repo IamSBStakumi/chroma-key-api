@@ -1,6 +1,6 @@
 # FROM python:3.11.9-slim-bullseye AS base
 # FROM base as builder
-FROM tiangolo/uvicorn-gunicorn-fastapi:python3.11-slim
+FROM python:3.11.9-slim-bullseye
 
 RUN pip install poetry
 
@@ -11,7 +11,7 @@ COPY pyproject.toml poetry.lock ./
 RUN poetry config virtualenvs.create false \
     && poetry install --no-dev
 
-COPY chroma_key_api ./
+COPY . ./
 
 # FROM tiangolo/uvicorn-gunicorn-fastapi:python3.11-slim AS runner
 # FROM base AS runner 
@@ -29,5 +29,4 @@ COPY chroma_key_api ./
 
 EXPOSE 8080
 
-# CMD ["poetry", "run", "uvicorn", "chroma-key-api.main:server", "--host", "0.0.0.0", "--port", "8080"]
-CMD ["poetry", "run", "uvicorn", "chroma-key-api.main:server", "--host", "0.0.0.0", "--port", "8080"]
+CMD ["poetry", "run", "uvicorn", "chroma_key_api.main:main", "--host", "0.0.0.0", "--port", "8080"]
