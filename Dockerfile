@@ -1,5 +1,5 @@
 FROM python:3.11.9-slim-bullseye AS base
-FROM base as builder
+FROM base AS builder
 
 RUN pip install poetry
 
