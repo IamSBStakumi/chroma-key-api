@@ -1,5 +1,5 @@
 [tool.poetry]
-name = "chroma-key-api"
+name = "chroma_key_api"
 version = "0.1.0"
 description = ""
 authors = ["SBS_takumi"]
