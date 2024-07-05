@@ -1,4 +1,4 @@
-from fastapi import FastAPI
+from fastapi import FastAPI, UploadFile
 from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel
 
@@ -29,5 +29,6 @@ async def root():
     return {"message": "Hello World"}
 
 @server.post("/create")
-async def create_movie(param: Param):
+async def create_movie(file: UploadFile, param: Param):
+
     return {"message", f'{param.contrast_adjustment_value},{param.chroma_key_color},{param.chroma_key_threshold},{param.noise_removal_iterations}'}
