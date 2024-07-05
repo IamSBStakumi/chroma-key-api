@@ -27,4 +27,4 @@ USER api
 
 EXPOSE 8080
 
-CMD ["poetry", "run", "uvicorn", "chroma_key_api.main:main", "--host", "0.0.0.0", "--port", "8080"]
+CMD ["poetry", "run", "uvicorn", "main.server:server", "--host", "0.0.0.0", "--port", "8080"]
