@@ -4,6 +4,9 @@ version = "0.1.0"
 description = ""
 authors = ["SBS_takumi"]
 readme = "README.md"
+packages = [
+    { include = "main" },
+]
 
 [tool.poetry.dependencies]
 python = "^3.11"

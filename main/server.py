@@ -1,6 +1,10 @@
 from fastapi import FastAPI, UploadFile
+import cv2
+import numpy as np
 from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel
+
+from variables import *
 
 server = FastAPI()
 
@@ -29,6 +33,15 @@ async def root():
     return {"message": "Hello World"}
 
 @server.post("/create")
-async def create_movie(file: UploadFile, param: Param):
+async def create_movie(image: UploadFile, video: UploadFile):
+    # 画像ファイルの内容を読み取る
+    image_content = await image.read()
+    # 動画ファイルの内容を読み取る
+    video_content = await video.read()
 
-    return {"message", f'{param.contrast_adjustment_value},{param.chroma_key_color},{param.chroma_key_threshold},{param.noise_removal_iterations}'}
+    return {"message", f'{image.filename}{video.filename}'}
+
+
+if __name__=="__main__":
+    import uvicorn
+    uvicorn.run(server, host="0.0.0.0", port=8080)
