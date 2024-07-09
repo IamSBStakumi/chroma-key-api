@@ -1,4 +1,4 @@
-from fastapi import FastAPI, UploadFile
+from fastapi import FastAPI, Request, UploadFile, File
 import cv2
 import numpy as np
 from fastapi.middleware.cors import CORSMiddleware
@@ -10,6 +10,7 @@ server = FastAPI()
 
 origins = [
     "http://localhost:3000",
+    "http://127.0.0.1:*",
     "https://chroma-key-front-spbb34bsma-dt.a.run.app",
 ]
 
@@ -32,8 +33,9 @@ class Param(BaseModel):
 async def root():
     return {"message": "Hello World"}
 
-@server.post("/create")
-async def create_movie(image: UploadFile, video: UploadFile):
+@server.post("/compose")
+async def create_movie(image: UploadFile=File(...), video: UploadFile=File(...)):
+    print(image.filename)
     # 画像ファイルの内容を読み取る
     image_content = await image.read()
     # 動画ファイルの内容を読み取る
