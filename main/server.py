@@ -4,12 +4,9 @@ import numpy as np
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.exceptions import RequestValidationError
 from fastapi.responses import JSONResponse, StreamingResponse
-from pydantic import BaseModel
 import tempfile
 import os
 import shutil
-
-from variables import *
 
 server = FastAPI()
 
@@ -27,12 +24,11 @@ server.add_middleware(
     allow_headers=["*"]
 )
 
-# リクエストボディの型定義
-class Param(BaseModel):
-    contrast_adjustment_value: float
-    chroma_key_color: list[int]
-    chroma_key_threshold: int
-    noise_removal_iterations: int
+# パラメータ設定
+contrast_adjustment_value = 1.5  # コントラスト調整値
+chroma_key_color = np.uint8([[[0, 255, 0]]])  # クロマキー処理の指定色（緑色）
+chroma_key_threshold = 20  # クロマキー処理の閾値
+noise_removal_iterations = 50  # ノイズ除去の繰り返し回数
 
 @server.get("/")
 async def root():
@@ -130,3 +126,4 @@ async def handler(request: Request, exc:RequestValidationError):
 # if __name__=="__main__":
 #     import uvicorn
 #     uvicorn.run(server, host="0.0.0.0", port=8080)
+
