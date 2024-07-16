@@ -15,6 +15,9 @@ COPY . ./
 FROM base AS runner 
 WORKDIR /app
 
+RUN apt -y update && apt -y upgrade
+RUN apt install -y libopencv-dev
+
 RUN addgroup --system --gid 1001 python
 RUN adduser --system --uid 1001 api
 
