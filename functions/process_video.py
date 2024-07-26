@@ -51,7 +51,6 @@ def process_video(temp_dir, image_path, video_path):
 
         return output_frame
 
-    i = 0
     for i in range(frame_count):
         success, movie_frame = video.read()
         if not success:
@@ -61,8 +60,6 @@ def process_video(temp_dir, image_path, video_path):
 
         # 画像を動画へ書き出し
         writer.write(chroma_frame)
-
-    ws_manager.send_message(i / frame_count * 100)    
 
     # 読み込んだ動画と書き出し先の動画を開放
     video.release()
