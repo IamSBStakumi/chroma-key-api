@@ -1,4 +1,4 @@
-from fastapi import FastAPI, Request, status
+from fastapi import FastAPI, Request, status, WebSocket
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.exceptions import RequestValidationError
 from fastapi.responses import JSONResponse
@@ -26,14 +26,20 @@ async def root():
 server.include_router(
     compose_movie.router,
 )
+
+@server.websocket("/ws")
+async def websocket_endpoint(websocket: WebSocket):
+    await websocket.accept()
+    while True:
+        data = await websocket.receive_text()
+        await websocket.send_text(data)
     
 @server.exception_handler(RequestValidationError)
 async def handler(request: Request, exc: RequestValidationError):
     print(exc)
     return JSONResponse(content={}, status_code=status.HTTP_422_UNPROCESSABLE_ENTITY)
 
-
-# if __name__=="__main__":
-#     import uvicorn
-#     uvicorn.run(server, host="0.0.0.0", port=8080)
+if __name__=="__main__":
+    import uvicorn
+    uvicorn.run(server, host="0.0.0.0", port=8080)
 

@@ -23,11 +23,6 @@ def process_video(temp_dir, image_path, video_path):
     processed_video_path=f'{temp_dir}/result.mp4'
     writer = cv2.VideoWriter(processed_video_path, fourcc, fps, (width, height), 1)
 
-    # 音声トラック書き出し
-    # clip_input = mpe.VideoFileClip(path)
-    # clip_input.audio.write_audiofile(f'{temp_dir}/result.mp4')
-    # print("音声トラック読み込み")
-
     def create_frame(input_frame):
         # コントラスト調整
         contrast_image = cv2.convertScaleAbs(input_frame, alpha=contrast_adjustment_value, beta=0)
@@ -55,7 +50,6 @@ def process_video(temp_dir, image_path, video_path):
 
     for i in range(frame_count):
         success, movie_frame = video.read()
-
         if not success:
             break
         

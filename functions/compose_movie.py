@@ -2,6 +2,7 @@ from fastapi import APIRouter, UploadFile, File
 from fastapi.responses import JSONResponse, StreamingResponse
 from concurrent.futures import ThreadPoolExecutor
 from functions import process_video as pv
+# import moviepy.editor as mpe 
 import tempfile
 import os
 import asyncio
@@ -24,16 +25,33 @@ async def compose_movie(image: UploadFile=File(...), video: UploadFile=File(...)
 
             await save_temp_file(image, image_path)
             await save_temp_file(video, video_path)
+            # try:
+            #     clip_input = mpe.VideoFileClip(video_path)
+            # except OSError as e:
+            #     clip_input = None
 
-            loop= asyncio.get_event_loop()
+            loop= asyncio.get_running_loop()
             processed_video_path = await loop.run_in_executor(executor, pv.process_video, temp_dir, image_path, video_path)
 
             # 音声トラックを動画に追加
-            # clip = mpe.VideoFileClip("outputs/chroma.mp4").subclip()
-            # clip.write_videofile("outputs/result.mp4", audio="outputs/audio.mp3")
+            # if clip_input and clip_input.audio:
+            #     try:    
+            #         synthesized_sound_video = f"{temp_dir}/result.mp4"
+            #         clip_input.audio.write_audiofile(f'{temp_dir}/audio.mp3')
+            #         clip = mpe.VideoFileClip(processed_video_path)
+            #         clip = clip.set_audio(mpe.AudioFileClip(f'{temp_dir}/audio.mp3'))
+            #         clip.write_videofile(synthesized_sound_video)
+            #     except Exception as e:
+            #         print(f"An error occurred: {e}")
 
             # 画像と動画をレスポンスとして返す
-            return StreamingResponse(open(processed_video_path, 'rb'), media_type="video/mp4")
+            # if os.path.exists(synthesized_sound_video):
+            #     return StreamingResponse(open(synthesized_sound_video, 'rb'), media_type="video/mp4")
+            # elif os.path.exists(processed_video_path):
+            if os.path.exists(processed_video_path):
+                return StreamingResponse(open(processed_video_path, 'rb'), media_type="video/mp4")
+            else:
+                return JSONResponse(content={"error": "video file not found"})
 
     except Exception as e:
         return JSONResponse(content={"error": str(e)}, status_code=500)
