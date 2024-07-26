@@ -1,8 +1,9 @@
-from fastapi import FastAPI, Request, status, WebSocket
+from fastapi import FastAPI, Request, status, WebSocket, WebSocketDisconnect
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.exceptions import RequestValidationError
 from fastapi.responses import JSONResponse
 from functions import compose_movie
+from functions import ConnectionManager as cm
 
 server = FastAPI()
 
@@ -19,6 +20,8 @@ server.add_middleware(
     allow_headers=["*"]
 )
 
+ws_manager = cm.ConnectionManager()
+
 @server.get("/")
 async def root():
     return {"message": "Hello World"}
@@ -29,10 +32,13 @@ server.include_router(
 
 @server.websocket("/ws")
 async def websocket_endpoint(websocket: WebSocket):
-    await websocket.accept()
-    while True:
-        data = await websocket.receive_text()
-        await websocket.send_text(data)
+    await ws_manager.connect(websocket)
+    try:
+        while True:
+            msg = await websocket.receive_text()
+            await ws_manager.send_message(msg)
+    except WebSocketDisconnect:
+        ws_manager.disconnect()
     
 @server.exception_handler(RequestValidationError)
 async def handler(request: Request, exc: RequestValidationError):

@@ -30,7 +30,7 @@ async def compose_movie(image: UploadFile=File(...), video: UploadFile=File(...)
             # except OSError as e:
             #     clip_input = None
 
-            loop= asyncio.get_running_loop()
+            loop = asyncio.get_running_loop()
             processed_video_path = await loop.run_in_executor(executor, pv.process_video, temp_dir, image_path, video_path)
 
             # 音声トラックを動画に追加
