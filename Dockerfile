@@ -5,26 +5,27 @@ RUN pip install poetry
 
 WORKDIR /app
 
+RUN apt -y update && apt -y upgrade
+RUN apt install -y libopencv-dev
+
 COPY pyproject.toml poetry.lock ./
 
-RUN poetry config virtualenvs.create false \
-    && poetry install --no-dev
+RUN poetry config virtualenvs.create false && \
+    poetry install --no-dev
 
 COPY . ./
 
 FROM base AS runner 
 WORKDIR /app
 
-RUN apt -y update && apt -y upgrade
-RUN apt install -y libopencv-dev
+RUN addgroup --system --gid 1001 python && \
+    adduser --system --uid 1001 api
 
-RUN addgroup --system --gid 1001 python
-RUN adduser --system --uid 1001 api
-
-COPY --from=builder /app /app
-
+COPY --from=builder /usr/lib/x86_64-linux-gnu /usr/lib/x86_64-linux-gnu
 COPY --from=builder /usr/local/lib/python3.11/site-packages /usr/local/lib/python3.11/site-packages
 COPY --from=builder /usr/local/bin /usr/local/bin
+
+COPY --from=builder /app /app
 
 USER api
 
