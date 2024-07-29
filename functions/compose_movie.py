@@ -2,7 +2,6 @@ from fastapi import APIRouter, UploadFile, File
 from fastapi.responses import JSONResponse, StreamingResponse
 from concurrent.futures import ThreadPoolExecutor
 from functions import process_video as pv
-# import moviepy.editor as mpe 
 import tempfile
 import os
 import asyncio
