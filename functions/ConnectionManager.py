@@ -1,15 +1,19 @@
 from fastapi import WebSocket
 
+from functions import init_progress as ip
+
+
 class ConnectionManager:
     def __init__(self):
         self.active_connections: dict[str, WebSocket] = {}
-    
+        ip.init_progress()
+
     async def connect(self, websocket: WebSocket) -> None:
         await websocket.accept()
         self.active_connections = websocket
 
-    def disconnect(self) -> None:
-        self.active_connections.clear()
+    def disconnect(self, websocket: WebSocket) -> None:
+        self.active_connections.remove(websocket)
 
-    async def send_message(self, msg: str) -> None:
-        await self.active_connections.send_json({"progress": msg})
+    async def send_message(self, msg) -> None:
+        await self.active_connections.send_json(msg)

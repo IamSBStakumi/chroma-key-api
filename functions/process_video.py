@@ -1,14 +1,14 @@
 import cv2
 import numpy as np
-from functions import ConnectionManager as cm
 
-ws_manager = cm.ConnectionManager()
+from functions import global_value as g
 
 # パラメータ設定
 contrast_adjustment_value = 1.5  # コントラスト調整値
 chroma_key_color = np.uint8([[[0, 255, 0]]])  # クロマキー処理の指定色（緑色）
 chroma_key_threshold = 20  # クロマキー処理の閾値
 noise_removal_iterations = 50  # ノイズ除去の繰り返し回数
+
 
 def process_video(temp_dir, image_path, video_path):
     video = cv2.VideoCapture(video_path)
@@ -23,7 +23,7 @@ def process_video(temp_dir, image_path, video_path):
     # 書き出し用のwriteクラスを作成
     fps = video.get(cv2.CAP_PROP_FPS)
     fourcc = cv2.VideoWriter_fourcc(*"mp4v")
-    processed_video_path=f'{temp_dir}/result.mp4'
+    processed_video_path = f"{temp_dir}/result.mp4"
     writer = cv2.VideoWriter(processed_video_path, fourcc, fps, (width, height), 1)
 
     def create_frame(input_frame):
@@ -39,9 +39,9 @@ def process_video(temp_dir, image_path, video_path):
         mask_image = cv2.bitwise_not(chroma_key_image)
 
         # ノイズ除去
-        transparent_image = cv2.cvtColor(input_frame, cv2.COLOR_BGR2BGRA) # RGBA形式に変換
-        transparent_image[:, :, 3] = mask_image # アルファチャンネルにマスク画像を設定
-        
+        transparent_image = cv2.cvtColor(input_frame, cv2.COLOR_BGR2BGRA)  # RGBA形式に変換
+        transparent_image[:, :, 3] = mask_image  # アルファチャンネルにマスク画像を設定
+
         # 背景画像に重ねる
         foreground = transparent_image[:, :, :3]
         alpha = transparent_image[:, :, 3:] / 255.0
@@ -55,8 +55,9 @@ def process_video(temp_dir, image_path, video_path):
         success, movie_frame = video.read()
         if not success:
             break
-        
+
         chroma_frame = create_frame(movie_frame)
+        g.val = (i / frame_count) * 0.8
 
         # 画像を動画へ書き出し
         writer.write(chroma_frame)
@@ -66,4 +67,3 @@ def process_video(temp_dir, image_path, video_path):
     writer.release()
 
     return processed_video_path
-
