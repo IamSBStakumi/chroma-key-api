@@ -57,7 +57,7 @@ def process_video(temp_dir, image_path, video_path):
             break
 
         chroma_frame = create_frame(movie_frame)
-        g.val = (i / frame_count) * 0.8
+        g.val = i / frame_count
 
         # 画像を動画へ書き出し
         writer.write(chroma_frame)
