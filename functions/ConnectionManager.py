@@ -13,7 +13,7 @@ class ConnectionManager:
         self.active_connections = websocket
 
     def disconnect(self, websocket: WebSocket) -> None:
-        self.active_connections.remove(websocket)
+        websocket.close()
 
     async def send_message(self, msg) -> None:
         await self.active_connections.send_json(msg)
