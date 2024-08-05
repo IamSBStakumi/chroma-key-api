@@ -37,7 +37,8 @@ async def websocket_endpoint(websocket: WebSocket):
     try:
         while True:
             msg = await websocket.receive_text()
-            await ws_manager.send_message({msg: "{:.3f}".format(g.val)})
+            if msg == "progress":
+                await ws_manager.send_message({msg: "{:.1f}".format(g.val * 100)})
     except WebSocketDisconnect:
         ws_manager.disconnect(websocket)
 
