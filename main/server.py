@@ -26,6 +26,11 @@ async def root():
     return {"message": "Hello World"}
 
 
+@server.get("/progress")
+async def return_progress():
+    return JSONResponse(content={"progress": "{:.1f}".format(g.val * 100)})
+
+
 server.include_router(
     compose_movie.router,
 )
