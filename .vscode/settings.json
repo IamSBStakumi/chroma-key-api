@@ -13,6 +13,31 @@
   "python.linting.flake8Enabled": true,
   // autoDocstring
   "autoDockstring.docstringFormat": "google",
-  "cSpell.words": ["fastapi", "isort", "pydantic", "uvicorn"],
+  "cSpell.words": [
+    "addgroup",
+    "adduser",
+    "aiofiles",
+    "audiofile",
+    "BGRA",
+    "fastapi",
+    "fourcc",
+    "imread",
+    "isort",
+    "libbsd",
+    "libglib",
+    "libgthread",
+    "libmd",
+    "libopencv",
+    "libxcb",
+    "moviepy",
+    "numpy",
+    "opencv",
+    "pydantic",
+    "pyproject",
+    "uvicorn",
+    "videofile",
+    "virtualenvs",
+    "Xdmcp"
+  ],
   "python.analysis.extraPaths": ["./main"]
 }

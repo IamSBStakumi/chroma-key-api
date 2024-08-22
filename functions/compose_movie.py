@@ -6,6 +6,7 @@ from concurrent.futures import ThreadPoolExecutor
 import aiofiles
 from fastapi import APIRouter, File, UploadFile
 from fastapi.responses import JSONResponse, StreamingResponse
+from moviepy.editor import AudioFileClip, VideoFileClip
 
 from functions import init_progress as ip
 from functions import process_video as pv
@@ -30,10 +31,11 @@ async def compose_movie(image: UploadFile = File(...), video: UploadFile = File(
 
             await save_temp_file(image, image_path)
             await save_temp_file(video, video_path)
-            # try:
-            #     clip_input = mpe.VideoFileClip(video_path)
-            # except OSError as e:
-            #     clip_input = None
+            try:
+                clip_input = VideoFileClip(video_path)
+            except OSError as e:
+                print(f"動画が開けませんでした: {e}")
+                clip_input = None
 
             loop = asyncio.get_running_loop()
             processed_video_path = await loop.run_in_executor(
@@ -41,20 +43,21 @@ async def compose_movie(image: UploadFile = File(...), video: UploadFile = File(
             )
 
             # 音声トラックを動画に追加
-            # if clip_input and clip_input.audio:
-            #     try:
-            #         synthesized_sound_video = f"{temp_dir}/result.mp4"
-            #         clip_input.audio.write_audiofile(f'{temp_dir}/audio.mp3')
-            #         clip = mpe.VideoFileClip(processed_video_path)
-            #         clip = clip.set_audio(mpe.AudioFileClip(f'{temp_dir}/audio.mp3'))
-            #         clip.write_videofile(synthesized_sound_video)
-            #     except Exception as e:
-            #         print(f"An error occurred: {e}")
+            if clip_input and clip_input.audio:
+                try:
+                    synthesized_sound_video = os.path.join(temp_dir, "result_with_audio.mp4")
+                    audio_path = os.path.join(temp_dir, "audio.mp3")
+                    clip_input.audio.write_audiofile(audio_path)
+                    clip = VideoFileClip(processed_video_path)
+                    clip = clip.set_audio(AudioFileClip(audio_path))
+                    clip.write_videofile(synthesized_sound_video)
 
-            # 画像と動画をレスポンスとして返す
-            # if os.path.exists(synthesized_sound_video):
-            #     return StreamingResponse(open(synthesized_sound_video, 'rb'), media_type="video/mp4")
-            # elif os.path.exists(processed_video_path):
+                    # 音声ありの動画をレスポンスとして返す
+                    return StreamingResponse(open(synthesized_sound_video, "rb"), media_type="video/mp4")
+                except Exception as e:
+                    print(f"An error occurred: {e}")
+
+            # 音声なしの動画をレスポンスとして返す
             if os.path.exists(processed_video_path):
                 return StreamingResponse(open(processed_video_path, "rb"), media_type="video/mp4")
             else:
