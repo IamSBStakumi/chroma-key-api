@@ -17,9 +17,10 @@ COPY . ./
 FROM base AS runner
 WORKDIR /app
 
+RUN apt -y update && apt -y upgrade && apt install -y libopencv-dev
+
 RUN addgroup --system --gid 1001 python && \
     adduser --system --uid 1001 api
-RUN apt install -y libopencv-dev
 
 COPY --from=builder /usr/local/lib/python3.11/site-packages /usr/local/lib/python3.11/site-packages
 COPY --from=builder /usr/local/bin /usr/local/bin
