@@ -47,15 +47,17 @@ async def compose_movie(image: UploadFile = File(...), video: UploadFile = File(
                 try:
                     synthesized_sound_video = os.path.join(temp_dir, "result_with_audio.mp4")
                     audio_path = os.path.join(temp_dir, "audio.mp3")
+                    # 音声ファイルを抽出
                     clip_input.audio.write_audiofile(audio_path)
+                    # 処理済みの動画に音声を追加
                     clip = VideoFileClip(processed_video_path)
                     clip = clip.set_audio(AudioFileClip(audio_path))
-                    clip.write_videofile(synthesized_sound_video)
+                    clip.write_videofile(synthesized_sound_video, codec="libx264", audio_codec="aac")
 
                     # 音声ありの動画をレスポンスとして返す
                     return StreamingResponse(open(synthesized_sound_video, "rb"), media_type="video/mp4")
                 except Exception as e:
-                    print(f"An error occurred: {e}")
+                    return JSONResponse(content={"error": f"音声追加中にエラーが発生しました: {e}"})
 
             # 音声なしの動画をレスポンスとして返す
             if os.path.exists(processed_video_path):
