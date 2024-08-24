@@ -6,7 +6,7 @@ from concurrent.futures import ThreadPoolExecutor
 import aiofiles
 from fastapi import APIRouter, File, UploadFile
 from fastapi.responses import JSONResponse, StreamingResponse
-from moviepy.editor import VideoFileClip
+from moviepy.editor import AudioFileClip, VideoFileClip
 
 from functions import init_progress as ip
 from functions import process_video as pv
@@ -45,15 +45,17 @@ async def compose_movie(image: UploadFile = File(...), video: UploadFile = File(
             # 音声トラックを動画に追加
             if clip_input and clip_input.audio:
                 try:
+                    synthesized_sound_video = os.path.join(temp_dir, "result_with_audio.mp4")
                     audio_path = os.path.join(temp_dir, "audio.mp3")
                     # 音声ファイルを抽出
                     clip_input.audio.write_audiofile(audio_path)
                     # 処理済みの動画に音声を追加
                     clip = VideoFileClip(processed_video_path)
-                    clip.write_videofile(f"{temp_dir}/result.mp4", audio=audio_path)
+                    clip = clip.set_audio(AudioFileClip(audio_path))
+                    clip.write_videofile(synthesized_sound_video, codec="libx264", audio_codec="aac")
 
                     # 音声ありの動画をレスポンスとして返す
-                    return StreamingResponse(open(f"{temp_dir}/result.mp4", "rb"), media_type="video/mp4")
+                    return StreamingResponse(open(synthesized_sound_video, "rb"), media_type="video/mp4")
                 except Exception as e:
                     return JSONResponse(content={"error": f"音声追加中にエラーが発生しました: {e}"})
 
