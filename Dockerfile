@@ -24,10 +24,11 @@ RUN addgroup --system --gid 1001 python && \
 
 COPY --from=builder /usr/local/lib/python3.11/site-packages /usr/local/lib/python3.11/site-packages
 COPY --from=builder /usr/local/bin /usr/local/bin
-COPY --from=builder /opt/ffmpeg /opt/ffmpeg
-COPY --from=builder /usr/local/share/model /usr/local/share
-COPY --from=builder /usr/local/bin/ff* /usr/local/bin
-COPY --from=builder /usr/local/bin/qt-* /usr/local/bin
+# COPY --from=builder /usr/bin/ffmpeg /usr/bin/ffmpeg
+# COPY --from=builder /usr/local/share/model /usr/local/share
+# COPY --from=builder /usr/local/bin/ff* /usr/local/bin
+# COPY --from=builder /usr/local/bin/qt-* /usr/local/bin
+
 # COPY --from=builder /usr/lib/x86_64-linux-gnu/libGL.so.1 /usr/lib/x86_64-linux-gnu/libGL.so.1
 # COPY --from=builder /usr/lib/x86_64-linux-gnu/libgthread-2.0.so.0 /usr/lib/x86_64-linux-gnu/libgthread-2.0.so.0
 # COPY --from=builder /usr/lib/x86_64-linux-gnu/libglib-2.0.so.0 /usr/lib/x86_64-linux-gnu/libglib-2.0.so.0
