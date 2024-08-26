@@ -18,22 +18,17 @@ FROM base AS runner
 WORKDIR /app
 
 RUN apt -y update && apt -y upgrade && \
-    apt install -y libopencv-dev \
-    wget \
-    xz-utils
-RUN wget https://johnvansickle.com/ffmpeg/builds/ffmpeg-git-amd64-static.tar.xz \
-      && tar xvf ./ffmpeg-git-amd64-static.tar.xz \
-      && cp ./ffmpeg*amd64-static/ffmpeg /usr/local/bin/
+    apt install -y libopencv-dev 
 
-RUN addgroup --system --gid 1001 python && \
-    adduser --system --uid 1001 api
+# RUN addgroup --system --gid 1001 python && \
+#     adduser --system --uid 1001 api
 
 COPY --from=builder /usr/local/lib/python3.11/site-packages /usr/local/lib/python3.11/site-packages
 COPY --from=builder /usr/local/bin /usr/local/bin
 
 COPY --from=builder /app /app
 
-USER api
+# USER api
 
 EXPOSE 8080
 
