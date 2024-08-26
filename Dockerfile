@@ -22,6 +22,8 @@ RUN apt -y update && apt -y upgrade && apt install -y libopencv-dev
 RUN addgroup --system --gid 1001 python && \
     adduser --system --uid 1001 api
 
+RUN chmod +x /usr/bin/ffmpeg
+
 COPY --from=builder /usr/local/lib/python3.11/site-packages /usr/local/lib/python3.11/site-packages
 COPY --from=builder /usr/local/bin /usr/local/bin
 # COPY --from=builder /usr/lib/x86_64-linux-gnu/libGL.so.1 /usr/lib/x86_64-linux-gnu/libGL.so.1
