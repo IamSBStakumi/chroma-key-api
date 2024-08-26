@@ -5,15 +5,7 @@ RUN pip install poetry
 
 WORKDIR /app
 
-RUN apt -y update && apt -y upgrade && apt -y install tar xz
-
-RUN curl https://johnvansickle.com/ffmpeg/releases/ffmpeg-release-amd64-static.tar.xz > /tmp/ffmpeg-release.tar.xz \ 
-    && tar xvf /tmp/ffmpeg-release.tar.xz -C /opt \ 
-    && mv /opt/ffmpeg-* /opt/ffmpeg \
-    && cd /opt/ffmpeg \
-    && mv model /usr/local/share \
-    && mv ffmpeg ffprobe qt-faststart /usr/local/bin \
-    && rm /tmp/ffmpeg-release.tar.xz
+RUN apt -y update && apt -y upgrade
 
 COPY pyproject.toml poetry.lock ./
 
@@ -25,7 +17,7 @@ COPY . ./
 FROM base AS runner
 WORKDIR /app
 
-RUN apt -y update && apt -y upgrade && apt install -y libopencv-dev
+RUN apt -y update && apt -y upgrade && apt install -y libopencv-dev && apt install -y ffmpeg
 
 RUN addgroup --system --gid 1001 python && \
     adduser --system --uid 1001 api
