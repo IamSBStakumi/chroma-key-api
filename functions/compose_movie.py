@@ -65,4 +65,5 @@ async def compose_movie(image: UploadFile = File(...), video: UploadFile = File(
                 return JSONResponse(content={"error": "video file not found"})
 
     except Exception as e:
+        print(e)
         return JSONResponse(content={"error": str(e)}, status_code=500)
