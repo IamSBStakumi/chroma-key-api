@@ -69,12 +69,20 @@ def process_video(temp_dir, image_path, video_path):
     #     writer.write(chroma_frame)
     #     print(f"{i}フレーム目の処理が終わりました")
 
-    with executor as process:
-        for i in range(frame_count):
-            movie_frame = video.set(cv2.CAP_PROP_POS_FRAMES, i)
-            composed_frame = process.submit(create_frame, movie_frame)
-            _ = wait([composed_frame])
-            print(f"{i}フレーム目の処理が終わりました")
+    # フレーム処理を並行して行う
+    futures = []
+    for i in range(frame_count):
+        success, movie_frame = video.read()
+        if not success:
+            break
+        # frameごとの処理をsubmit
+        futures.append(executor.submit(create_frame, movie_frame))
+    
+    # すべてのフレームの処理が終わるのを待つ
+    for i, future in enumerate(futures):
+        composed_frame = future.result()
+        writer.write(composed_frame)
+        print(f"{i}フレーム目の処理が終わりました")
 
     # 読み込んだ動画と書き出し先の動画を開放
     video.release()
