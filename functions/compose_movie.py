@@ -51,7 +51,7 @@ async def compose_movie(image: UploadFile = File(...), video: UploadFile = File(
                     # 処理済みの動画に音声を追加
                     video_clip = VideoFileClip(processed_video_path)
                     video_clip = video_clip.set_audio(audio_clip)
-                    video_clip.write_videofile(f"{temp_dir}/synthesized_result.mp4")
+                    video_clip.write_videofile(f"{temp_dir}/synthesized_result.mp4", fps=clip_input.fps)
 
                     # 音声ありの動画をレスポンスとして返す
                     return StreamingResponse(open(f"{temp_dir}/synthesized_result.mp4", "rb"), media_type="video/mp4")
