@@ -1,7 +1,10 @@
+import os
+from concurrent.futures import ThreadPoolExecutor, wait
+
 import cv2
 import numpy as np
 
-from functions import global_value as g
+executor = ThreadPoolExecutor(max_workers=os.cpu_count())
 
 # パラメータ設定
 contrast_adjustment_value = 1.5  # コントラスト調整値
@@ -49,18 +52,29 @@ def process_video(temp_dir, image_path, video_path):
 
         output_frame = cv2.convertScaleAbs(background * (1 - alpha) + foreground * alpha)
 
-        return output_frame
+        writer.write(output_frame)
 
-    for i in range(frame_count):
-        success, movie_frame = video.read()
-        if not success:
-            break
+        # return output_frame
 
-        chroma_frame = create_frame(movie_frame)
-        g.val = i / frame_count
+    print("動画の合成処理を開始します")
+    # for i in range(frame_count):
+    #     success, movie_frame = video.read()
+    #     if not success:
+    #         break
 
-        # 画像を動画へ書き出し
-        writer.write(chroma_frame)
+    #     chroma_frame = create_frame(movie_frame)
+    #     g.val = i / frame_count
+
+    #     # 画像を動画へ書き出し
+    #     writer.write(chroma_frame)
+    #     print(f"{i}フレーム目の処理が終わりました")
+
+    with executor as process:
+        for i in range(frame_count):
+            movie_frame = video.set(cv2.CAP_PROP_POS_FRAMES, i)
+            composed_frame = process.submit(create_frame, movie_frame)
+            _ = wait([composed_frame])
+            print(f"{i}フレーム目の処理が終わりました")
 
     # 読み込んだ動画と書き出し先の動画を開放
     video.release()
