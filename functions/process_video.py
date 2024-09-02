@@ -3,6 +3,7 @@ from concurrent.futures import ThreadPoolExecutor, wait
 
 import cv2
 import numpy as np
+# import time
 
 executor = ThreadPoolExecutor(max_workers=os.cpu_count())
 
@@ -57,32 +58,45 @@ def process_video(temp_dir, image_path, video_path):
         # return output_frame
 
     print("動画の合成処理を開始します")
-    # for i in range(frame_count):
-    #     success, movie_frame = video.read()
-    #     if not success:
-    #         break
-
-    #     chroma_frame = create_frame(movie_frame)
-    #     g.val = i / frame_count
-
-    #     # 画像を動画へ書き出し
-    #     writer.write(chroma_frame)
-    #     print(f"{i}フレーム目の処理が終わりました")
-
-    # フレーム処理を並行して行う
-    futures = []
     for i in range(frame_count):
         success, movie_frame = video.read()
         if not success:
             break
-        # frameごとの処理をsubmit
-        futures.append(executor.submit(create_frame, movie_frame))
-    
-    # すべてのフレームの処理が終わるのを待つ
-    for i, future in enumerate(futures):
-        composed_frame = future.result()
-        writer.write(composed_frame)
+
+        create_frame(movie_frame)
+        # chroma_frame = create_frame(movie_frame)
+        # g.val = i / frame_count
+
+        # 画像を動画へ書き出し
+        # writer.write(chroma_frame)
         print(f"{i}フレーム目の処理が終わりました")
+
+    # フレーム処理を並行して行う
+    # futures = []
+    # for i in range(frame_count):
+    #     success, movie_frame = video.read()
+    #     if not success:
+    #         break
+    #     # PTSの計算
+    #     pts = i / fps
+
+    #     # frameごとの処理をsubmit
+    #     futures.append(executor.submit(create_frame, movie_frame, pts))
+
+    # すべてのフレームの処理が終わるのを待つ
+    # for i, future in enumerate(futures):
+    #     composed_frame = future.result()
+    #     # PTSの計算
+    #     pts = i / fps
+    #     # フレームをエンコーダに送信
+    #     while True:
+    #         result = writer.write(composed_frame)
+    #         if result:
+    #             print(f"{i}フレーム目の書き込みが終わりました")
+    #             break
+    #         else:
+    #             # エンコーダが処理できる状態になるまで待機
+    #             time.sleep(0.01)
 
     # 読み込んだ動画と書き出し先の動画を開放
     video.release()
