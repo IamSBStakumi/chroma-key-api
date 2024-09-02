@@ -1,9 +1,8 @@
 import os
-from concurrent.futures import ThreadPoolExecutor, wait
+from concurrent.futures import ThreadPoolExecutor
 
 import cv2
 import numpy as np
-# import time
 
 executor = ThreadPoolExecutor(max_workers=os.cpu_count())
 
@@ -30,6 +29,12 @@ def process_video(temp_dir, image_path, video_path):
     processed_video_path = f"{temp_dir}/result.mp4"
     writer = cv2.VideoWriter(processed_video_path, fourcc, fps, (width, height), 1)
 
+    # フレーム処理を並行して行う
+    def process_and_write_frame(i, movie_frame):
+        print(f"{i}フレーム目のprocess_and_write_frame関数実行")
+        output_frame = create_frame(movie_frame)
+        return i, output_frame
+
     def create_frame(input_frame):
         # コントラスト調整
         contrast_image = cv2.convertScaleAbs(input_frame, alpha=contrast_adjustment_value, beta=0)
@@ -53,50 +58,27 @@ def process_video(temp_dir, image_path, video_path):
 
         output_frame = cv2.convertScaleAbs(background * (1 - alpha) + foreground * alpha)
 
-        writer.write(output_frame)
+        # writer.write(output_frame)
 
-        # return output_frame
+        return output_frame
 
     print("動画の合成処理を開始します")
+    futures = []
     for i in range(frame_count):
         success, movie_frame = video.read()
         if not success:
             break
 
-        create_frame(movie_frame)
-        # chroma_frame = create_frame(movie_frame)
-        # g.val = i / frame_count
+        # frameごとの処理をsubmit
+        futures.append(executor.submit(process_and_write_frame, i, movie_frame))
+    print("全フレームの処理が完了")
 
-        # 画像を動画へ書き出し
-        # writer.write(chroma_frame)
-        print(f"{i}フレーム目の処理が終わりました")
-
-    # フレーム処理を並行して行う
-    # futures = []
-    # for i in range(frame_count):
-    #     success, movie_frame = video.read()
-    #     if not success:
-    #         break
-    #     # PTSの計算
-    #     pts = i / fps
-
-    #     # frameごとの処理をsubmit
-    #     futures.append(executor.submit(create_frame, movie_frame, pts))
-
-    # すべてのフレームの処理が終わるのを待つ
-    # for i, future in enumerate(futures):
-    #     composed_frame = future.result()
-    #     # PTSの計算
-    #     pts = i / fps
-    #     # フレームをエンコーダに送信
-    #     while True:
-    #         result = writer.write(composed_frame)
-    #         if result:
-    #             print(f"{i}フレーム目の書き込みが終わりました")
-    #             break
-    #         else:
-    #             # エンコーダが処理できる状態になるまで待機
-    #             time.sleep(0.01)
+    # すべての処理が終わるのを待つ
+    for future in futures:
+        i, output_frame = future.result()
+        # フレームをエンコーダに送信
+        writer.write(output_frame)
+        print(f"{i}フレーム目の書き込みが終わりました")
 
     # 読み込んだ動画と書き出し先の動画を開放
     video.release()
