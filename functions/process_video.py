@@ -32,7 +32,6 @@ def process_video(temp_dir, image_path, video_path):
 
     # フレーム処理を並行して行う
     def process_and_write_frame(i, movie_frame):
-        print(f"{i}フレーム目のprocess_and_write_frame関数実行")
         output_frame = create_frame(movie_frame)
         return i, output_frame
 
