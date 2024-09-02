@@ -58,11 +58,8 @@ def process_video(temp_dir, image_path, video_path):
 
         output_frame = cv2.convertScaleAbs(background * (1 - alpha) + foreground * alpha)
 
-        # writer.write(output_frame)
-
         return output_frame
 
-    print("動画の合成処理を開始します")
     futures = []
     for i in range(frame_count):
         success, movie_frame = video.read()
@@ -71,14 +68,12 @@ def process_video(temp_dir, image_path, video_path):
 
         # frameごとの処理をsubmit
         futures.append(executor.submit(process_and_write_frame, i, movie_frame))
-    print("全フレームの処理が完了")
 
     # すべての処理が終わるのを待つ
     for future in futures:
         i, output_frame = future.result()
         # フレームをエンコーダに送信
         writer.write(output_frame)
-        print(f"{i}フレーム目の書き込みが終わりました")
 
     # 読み込んだ動画と書き出し先の動画を開放
     video.release()
