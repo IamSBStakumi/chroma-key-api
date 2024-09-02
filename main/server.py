@@ -1,11 +1,12 @@
-from fastapi import FastAPI, Request, WebSocket, WebSocketDisconnect, status
+from fastapi import FastAPI, Request, status  # WebSocket, WebSocketDisconnect,
 from fastapi.exceptions import RequestValidationError
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse
 
 from functions import ConnectionManager as cm
 from functions import compose_movie
-from functions import global_value as g
+
+# from functions import global_value as g
 
 server = FastAPI()
 
@@ -26,9 +27,9 @@ async def root():
     return {"message": "Hello World"}
 
 
-@server.get("/progress")
-async def return_progress():
-    return JSONResponse(content={"progress": "{:.1f}".format(g.val * 100)})
+# @server.get("/progress")
+# async def return_progress():
+#     return JSONResponse(content={"progress": "{:.1f}".format(g.val * 100)})
 
 
 server.include_router(
@@ -36,16 +37,16 @@ server.include_router(
 )
 
 
-@server.websocket("/ws")
-async def websocket_endpoint(websocket: WebSocket):
-    await ws_manager.connect(websocket)
-    try:
-        while True:
-            msg = await websocket.receive_text()
-            if msg == "progress":
-                await ws_manager.send_message({msg: "{:.1f}".format(g.val * 100)})
-    except WebSocketDisconnect:
-        ws_manager.disconnect(websocket)
+# @server.websocket("/ws")
+# async def websocket_endpoint(websocket: WebSocket):
+#     await ws_manager.connect(websocket)
+#     try:
+#         while True:
+#             msg = await websocket.receive_text()
+#             if msg == "progress":
+#                 await ws_manager.send_message({msg: "{:.1f}".format(g.val * 100)})
+#     except WebSocketDisconnect:
+#         ws_manager.disconnect(websocket)
 
 
 @server.exception_handler(RequestValidationError)

@@ -1,3 +1,4 @@
+import gc
 import os
 from concurrent.futures import ThreadPoolExecutor
 
@@ -31,7 +32,6 @@ def process_video(temp_dir, image_path, video_path):
 
     # フレーム処理を並行して行う
     def process_and_write_frame(i, movie_frame):
-        print(f"{i}フレーム目のprocess_and_write_frame関数実行")
         output_frame = create_frame(movie_frame)
         return i, output_frame
 
@@ -52,11 +52,19 @@ def process_video(temp_dir, image_path, video_path):
         transparent_image[:, :, 3] = mask_image  # アルファチャンネルにマスク画像を設定
 
         # 背景画像に重ねる
-        foreground = transparent_image[:, :, :3]
-        alpha = transparent_image[:, :, 3:] / 255.0
-        background = back.copy()
+        # foreground = transparent_image[:, :, :3]
+        # alpha = transparent_image[:, :, 3:] / 255.0
+        # background = back.copy()
 
-        output_frame = cv2.convertScaleAbs(background * (1 - alpha) + foreground * alpha)
+        # output_frame = cv2.convertScaleAbs(background * (1 - alpha) + foreground * alpha)
+        output_frame = cv2.convertScaleAbs(
+            back * (1 - (transparent_image[:, :, 3:] / 255.0)) + transparent_image[:, :, :3]
+        )
+
+        # 明示的に不要なデータを開放
+        del contrast_image, hsv_image, chroma_key_image, mask_image, transparent_image
+        # ガベージコレクション実行
+        gc.collect()
 
         return output_frame
 
