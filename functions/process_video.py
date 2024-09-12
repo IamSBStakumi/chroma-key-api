@@ -58,7 +58,7 @@ def process_video(temp_dir, image_path, video_path):
 
         # output_frame = cv2.convertScaleAbs(background * (1 - alpha) + foreground * alpha)
         output_frame = cv2.convertScaleAbs(
-            back * (1 - (transparent_image[:, :, 3:] / 255.0)) + transparent_image[:, :, :3]
+            back * (1 - (transparent_image[:, :, 3:] / 255.0)) + transparent_image[:, :, :3] * (transparent_image[:, :, 3:] / 255.0)
         )
 
         # 明示的に不要なデータを開放
