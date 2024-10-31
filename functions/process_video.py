@@ -51,12 +51,6 @@ def process_video(temp_dir, image_path, video_path):
         transparent_image = cv2.cvtColor(input_frame, cv2.COLOR_BGR2BGRA)  # RGBA形式に変換
         transparent_image[:, :, 3] = mask_image  # アルファチャンネルにマスク画像を設定
 
-        # 背景画像に重ねる
-        # foreground = transparent_image[:, :, :3]
-        # alpha = transparent_image[:, :, 3:] / 255.0
-        # background = back.copy()
-
-        # output_frame = cv2.convertScaleAbs(background * (1 - alpha) + foreground * alpha)
         output_frame = cv2.convertScaleAbs(
             back * (1 - (transparent_image[:, :, 3:] / 255.0)) + transparent_image[:, :, :3] * (transparent_image[:, :, 3:] / 255.0)
         )
@@ -68,20 +62,27 @@ def process_video(temp_dir, image_path, video_path):
 
         return output_frame
 
-    futures = []
+    # futures = []
+    bar_template = "\r[{0}] {1}/100%"
+
     for i in range(frame_count):
         success, movie_frame = video.read()
         if not success:
             break
 
-        # frameごとの処理をsubmit
-        futures.append(executor.submit(process_and_write_frame, i, movie_frame))
+    #     # frameごとの処理をsubmit
+    #     futures.append(executor.submit(process_and_write_frame, i, movie_frame))
 
-    # すべての処理が終わるのを待つ
-    for future in futures:
-        i, output_frame = future.result()
+    # # すべての処理が終わるのを待つ
+    # for future in futures:
+        # i, output_frame = future.result()
+        _, output_frame = process_and_write_frame(i, movie_frame)
         # フレームをエンコーダに送信
         writer.write(output_frame)
+
+        progress_rate = 100 * (i / frame_count)
+        bar = "#" * int(progress_rate) + " " * (100-int(progress_rate))
+        print(bar_template.format(bar, progress_rate), end="")
 
     # 読み込んだ動画と書き出し先の動画を開放
     video.release()
