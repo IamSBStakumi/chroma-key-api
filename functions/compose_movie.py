@@ -7,7 +7,7 @@ from fastapi import APIRouter, File, UploadFile
 from fastapi.responses import JSONResponse, StreamingResponse
 from moviepy.editor import AudioFileClip, VideoFileClip
 
-from functions import init_progress as ip
+# from functions import init_progress as ip
 from functions import process_video as pv
 
 router = APIRouter()
@@ -22,7 +22,7 @@ async def save_temp_file(upload_file: UploadFile, destination_path: str):
 
 @router.post("/compose")
 async def compose_movie(image: UploadFile = File(...), video: UploadFile = File(...)):
-    ip.init_progress()
+    # ip.init_progress()
     try:
         with tempfile.TemporaryDirectory() as temp_dir:
             image_path = os.path.join(temp_dir, image.filename)
@@ -30,24 +30,32 @@ async def compose_movie(image: UploadFile = File(...), video: UploadFile = File(
 
             await save_temp_file(image, image_path)
             await save_temp_file(video, video_path)
+            print("tempファイル作成")
             try:
                 clip_input = VideoFileClip(video_path)
             except OSError as e:
                 print(f"動画が開けませんでした: {e}")
                 clip_input = None
 
+            print("動画合成開始")
             processed_video_path = pv.process_video(temp_dir, image_path, video_path)
 
+            print("音声合成開始")
             # 音声トラックを動画に追加
             if clip_input and clip_input.audio:
                 try:
                     # 音声ファイルを抽出
-                    clip_input.audio.write_audiofile(f"{temp_dir}/audio.mp3")
-                    audio_clip = AudioFileClip(f"{temp_dir}/audio.mp3")
+                    clip_input.audio.write_audiofile(f"{temp_dir}/audio.m4a")
+                    audio_clip = AudioFileClip(f"{temp_dir}/audio.m4a")
+                    # clip_input.audio.write_audiofile(f"{temp_dir}/audio.mp3")
+                    # audio_clip = AudioFileClip(f"{temp_dir}/audio.mp3")
+
                     # 処理済みの動画に音声を追加
                     video_clip = VideoFileClip(processed_video_path)
                     video_clip = video_clip.set_audio(audio_clip)
-                    video_clip.write_videofile(f"{temp_dir}/synthesized_result.mp4", fps=clip_input.fps)
+                    video_clip.write_videofile(f"{temp_dir}/synthesized_result.mp4", codec="libx264", audio_codec="aac", fps=clip_input.fps)
+                    # video_clip.write_videofile(f"{temp_dir}/synthesized_result.mp4", fps=clip_input.fps)
+
 
                     # 音声ありの動画をレスポンスとして返す
                     return StreamingResponse(open(f"{temp_dir}/synthesized_result.mp4", "rb"), media_type="video/mp4")
@@ -61,5 +69,6 @@ async def compose_movie(image: UploadFile = File(...), video: UploadFile = File(
                 return JSONResponse(content={"error": "video file not found"})
 
     except Exception as e:
+        print("エラーが発生")
         print(e)
         return JSONResponse(content={"error": str(e)}, status_code=500)
