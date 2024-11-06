@@ -37,12 +37,12 @@ def process_video(temp_dir, image_path, video_path):
             break
 
         # frameごとの処理をsubmit
-        # futures.append(executor.submit(process_and_write_frame, i, movie_frame))
+        futures.append(executor.submit(process_and_write_frame, i, movie_frame))
 
     # すべての処理が終わるのを待つ
-    # for future in futures:
-        # i, output_frame = future.result()
-        _, output_frame = process_and_write_frame(i, movie_frame)
+    for future in futures:
+        i, output_frame = future.result()
+        # _, output_frame = process_and_write_frame(i, movie_frame)
         # フレームをエンコーダに送信
         writer.write(output_frame)
 
