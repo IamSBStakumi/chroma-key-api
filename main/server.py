@@ -35,7 +35,10 @@ async def root():
 
 server.include_router(
     compose_movie.router,
-    beta.router,
+)
+
+server.include_router(
+    beta.router
 )
 
 

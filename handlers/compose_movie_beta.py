@@ -11,11 +11,11 @@ from file_operators.synthesize_audio_file import synthesize_audio_file
 from compositor_beta.process_video_beta import process_video_beta
 
 router = APIRouter()
-executor = ThreadPoolExecutor(max_workers=4)
 
 @router.post("/compose/beta")
 async def compose_movie_beta(image: UploadFile = File(...), video: UploadFile = File(...)):
     try:
+        print("ベータ版のAPIが呼び出されました")
         with tempfile.TemporaryDirectory() as temp_dir:
             image_path = await save_temp_file(image, temp_dir, image.filename)
             video_path = await save_temp_file(video, temp_dir, video.filename)
