@@ -3,8 +3,8 @@ from fastapi.exceptions import RequestValidationError
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse
 
-from functions import ConnectionManager as cm
-from functions import compose_movie
+from websocket import ConnectionManager as cm
+from handlers import compose_movie
 
 # from functions import global_value as g
 

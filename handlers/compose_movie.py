@@ -8,7 +8,7 @@ from fastapi.responses import JSONResponse, StreamingResponse
 from moviepy.editor import AudioFileClip, VideoFileClip
 
 # from functions import init_progress as ip
-from functions import process_video as pv
+from compositor import process_video as pv
 
 router = APIRouter()
 executor = ThreadPoolExecutor(max_workers=4)
