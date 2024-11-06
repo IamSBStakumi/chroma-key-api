@@ -1,6 +1,6 @@
 from fastapi import WebSocket
 
-from functions import init_progress as ip
+from progress import init_progress as ip
 
 
 class ConnectionManager:
