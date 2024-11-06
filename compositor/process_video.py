@@ -3,7 +3,7 @@ from concurrent.futures import ThreadPoolExecutor
 
 import cv2
 
-from compositor import create_frame as cf
+from compositor.create_frame import create_frame
 
 executor = ThreadPoolExecutor(max_workers=os.cpu_count())
 
@@ -25,7 +25,7 @@ def process_video(temp_dir, image_path, video_path):
 
     # フレーム処理を並行して行う
     def process_and_write_frame(i, movie_frame):
-        output_frame = cf.create_frame(movie_frame, back)
+        output_frame = create_frame(movie_frame, back)
         return i, output_frame
 
     futures = []
