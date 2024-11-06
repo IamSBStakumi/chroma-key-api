@@ -2,7 +2,6 @@ import os
 import tempfile
 from concurrent.futures import ThreadPoolExecutor
 
-import aiofiles
 from fastapi import APIRouter, File, UploadFile
 from fastapi.responses import JSONResponse, StreamingResponse
 from moviepy.editor import VideoFileClip
@@ -14,13 +13,6 @@ from compositor import process_video as pv
 
 router = APIRouter()
 executor = ThreadPoolExecutor(max_workers=4)
-
-
-async def save_temp_file(upload_file: UploadFile, destination_path: str):
-    async with aiofiles.open(destination_path, "wb") as out_file:
-        while content := await upload_file.read(1024):
-            await out_file.write(content)
-
 
 @router.post("/compose")
 async def compose_movie(image: UploadFile = File(...), video: UploadFile = File(...)):
