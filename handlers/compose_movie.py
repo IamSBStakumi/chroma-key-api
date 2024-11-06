@@ -27,8 +27,8 @@ async def compose_movie(image: UploadFile = File(...), video: UploadFile = File(
     # ip.init_progress()
     try:
         with tempfile.TemporaryDirectory() as temp_dir:
-            image_path = stf.save_temp_file(image, temp_dir, image.filename)
-            video_path = stf.save_temp_file(video, temp_dir, video.filename)
+            image_path = await stf.save_temp_file(image, temp_dir, image.filename)
+            video_path = await stf.save_temp_file(video, temp_dir, video.filename)
             print("tempファイル作成")
             try:
                 clip_input = VideoFileClip(video_path)
