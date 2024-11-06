@@ -3,11 +3,11 @@ from concurrent.futures import ThreadPoolExecutor
 
 import cv2
 
-from compositor.create_frame import create_frame
+from compositor_beta.create_frame_beta import create_frame_beta
 
 executor = ThreadPoolExecutor(max_workers=os.cpu_count())
 
-def process_video(temp_dir, image_path, video_path):
+def process_video_beta(temp_dir, image_path, video_path):
     video = cv2.VideoCapture(video_path)
     width = int(video.get(cv2.CAP_PROP_FRAME_WIDTH))
     height = int(video.get(cv2.CAP_PROP_FRAME_HEIGHT))
@@ -23,13 +23,15 @@ def process_video(temp_dir, image_path, video_path):
     processed_video_path = f"{temp_dir}/result.mp4"
     writer = cv2.VideoWriter(processed_video_path, fourcc, fps, (width, height), 1)
 
+    # 背景差分を計算するモデル
+    model = cv2.createBackgroundSubtractorMOG2()
+
     # フレーム処理を並行して行う
     def process_and_write_frame(i, movie_frame):
-        output_frame = create_frame(movie_frame, back)
+        output_frame = create_frame_beta(movie_frame, back, model)
         return i, output_frame
 
     futures = []
-    # bar_template = "\r[{0}] {1}/100%"
 
     for i in range(frame_count):
         success, movie_frame = video.read()
@@ -45,10 +47,6 @@ def process_video(temp_dir, image_path, video_path):
         # _, output_frame = process_and_write_frame(i, movie_frame)
         # フレームをエンコーダに送信
         writer.write(output_frame)
-
-        # progress_rate = 100 * (i / frame_count)
-        # bar = "#" * int(progress_rate) + " " * (100-int(progress_rate))
-        # print(bar_template.format(bar, progress_rate), end="")
 
     # 読み込んだ動画と書き出し先の動画を開放
     video.release()

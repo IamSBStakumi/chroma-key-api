@@ -5,6 +5,7 @@ from fastapi.responses import JSONResponse
 
 from websocket import ConnectionManager as cm
 from handlers import compose_movie
+from handlers import compose_movie_beta as beta
 
 # from functions import global_value as g
 
@@ -34,6 +35,10 @@ async def root():
 
 server.include_router(
     compose_movie.router,
+)
+
+server.include_router(
+    beta.router
 )
 
 

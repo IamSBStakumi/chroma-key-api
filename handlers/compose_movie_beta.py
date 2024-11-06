@@ -6,18 +6,16 @@ from fastapi import APIRouter, File, UploadFile
 from fastapi.responses import JSONResponse, StreamingResponse
 from moviepy.editor import VideoFileClip
 
-# from functions import init_progress as ip
 from file_operators.save_temp_file import save_temp_file
 from file_operators.synthesize_audio_file import synthesize_audio_file
-from compositor.process_video import process_video
+from compositor_beta.process_video_beta import process_video_beta
 
 router = APIRouter()
-executor = ThreadPoolExecutor(max_workers=4)
 
-@router.post("/compose")
-async def compose_movie(image: UploadFile = File(...), video: UploadFile = File(...)):
-    # ip.init_progress()
+@router.post("/compose/beta")
+async def compose_movie_beta(image: UploadFile = File(...), video: UploadFile = File(...)):
     try:
+        print("ベータ版のAPIが呼び出されました")
         with tempfile.TemporaryDirectory() as temp_dir:
             image_path = await save_temp_file(image, temp_dir, image.filename)
             video_path = await save_temp_file(video, temp_dir, video.filename)
@@ -29,7 +27,7 @@ async def compose_movie(image: UploadFile = File(...), video: UploadFile = File(
                 clip_input = None
 
             print("動画合成開始")
-            processed_video_path = process_video(temp_dir, image_path, video_path)
+            processed_video_path = process_video_beta(temp_dir, image_path, video_path)
 
             # 音声トラックを動画に追加
             if clip_input and clip_input.audio:
