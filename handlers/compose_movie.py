@@ -5,7 +5,7 @@ from concurrent.futures import ThreadPoolExecutor
 import aiofiles
 from fastapi import APIRouter, File, UploadFile
 from fastapi.responses import JSONResponse, StreamingResponse
-from moviepy.editor import AudioFileClip, VideoFileClip
+from moviepy.editor import VideoFileClip
 
 # from functions import init_progress as ip
 import file_operators as fo
