@@ -14,16 +14,16 @@ def create_frame_beta(input_frame, back, model):
     hsv_image = cv2.cvtColor(contrast_image, cv2.COLOR_BGR2HSV)
     mask_image = model.apply(hsv_image)
 
-    # RGBA画像作成
     transparent_image = cv2.cvtColor(input_frame, cv2.COLOR_BGR2BGRA)  # RGBA形式に変換
     transparent_image[:, :, 3] = mask_image  # アルファチャンネルにマスク画像を設定
-    
-    # 背景と合成
-    alpha = (transparent_image[:, :, 3] / 255.0)[..., None]
-    output_frame = (back * (1 - alpha) + transparent_image[:, :, :3] * alpha).astype(np.uint8)
 
-    # メモリ開放
+    output_frame = cv2.convertScaleAbs(
+        back * (1 - (transparent_image[:, :, 3:] / 255.0)) + transparent_image[:, :, :3] * (transparent_image[:, :, 3:] / 255.0)
+    )
+
+    # 明示的に不要なデータを開放
     del contrast_image, hsv_image, mask_image, transparent_image
+    # ガベージコレクション実行
     gc.collect()
 
     return output_frame
