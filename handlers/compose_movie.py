@@ -16,7 +16,6 @@ executor = ThreadPoolExecutor(max_workers=4)
 
 @router.post("/compose")
 async def compose_movie(image: UploadFile = File(...), video: UploadFile = File(...)):
-    # ip.init_progress()
     try:
         with tempfile.TemporaryDirectory() as temp_dir:
             image_path = await save_temp_file(image, temp_dir, image.filename)
