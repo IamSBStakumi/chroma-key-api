@@ -11,7 +11,8 @@ noise_removal_iterations = 50  # ノイズ除去の繰り返し回数
 
 def create_frame(input_frame, back):
     # コントラスト調整
-    contrast_image = cv2.convertScaleAbs(input_frame, alpha=contrast_adjustment_value, beta=0)
+    # contrast_image = cv2.convertScaleAbs(input_frame, alpha=contrast_adjustment_value, beta=0)
+    contrast_image = cv2.addWeighted(input_frame, contrast_adjustment_value, np.zeros_like(input_frame))
 
     # クロマキー処理と二値化
     hsv_chroma_key_color = cv2.cvtColor(chroma_key_color, cv2.COLOR_BGR2HSV)
