@@ -30,9 +30,8 @@ def create_frame(input_frame, back):
     alpha = (transparent_image[:, :, 3] / 255.0)[..., None]
     output_frame = (back * (1 - alpha) + transparent_image[:, :, :3] * alpha).astype(np.uint8)
 
-    # 明示的に不要なデータを開放
+    #メモリ開放
     del contrast_image, hsv_image, chroma_key_mask, mask_image, transparent_image
-    # ガベージコレクション実行
     gc.collect()
 
     return output_frame
