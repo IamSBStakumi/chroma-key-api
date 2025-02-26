@@ -19,7 +19,7 @@ def create_frame(input_frame, back):
     hsv_image = cv2.cvtColor(contrast_image, cv2.COLOR_BGR2HSV)
     chroma_key_mask = cv2.inRange(hsv_image, lower_green, upper_green)
 
-    # ノイズ除去（より効率的）
+    # ノイズ除去
     mask_image = cv2.GaussianBlur(255 - chroma_key_mask, (5, 5), 0)
 
     # RGBA画像作成
