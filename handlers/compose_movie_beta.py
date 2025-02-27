@@ -4,7 +4,7 @@ from concurrent.futures import ThreadPoolExecutor
 
 from fastapi import APIRouter, File, UploadFile
 from fastapi.responses import JSONResponse, StreamingResponse
-from moviepy.editor import VideoFileClip
+from moviepy import VideoFileClip
 
 from file_operators.save_temp_file import save_temp_file
 from file_operators.synthesize_audio_file import synthesize_audio_file
