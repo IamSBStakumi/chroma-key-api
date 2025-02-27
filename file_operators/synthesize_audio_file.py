@@ -1,4 +1,4 @@
-from moviepy.editor import AudioFileClip, VideoFileClip
+from moviepy import AudioFileClip, VideoFileClip
 
 def synthesize_audio_file(clip_input: VideoFileClip, temp_dir: str, processed_video_path: str):
     # 音声ファイルを抽出
