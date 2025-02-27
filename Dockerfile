@@ -38,7 +38,8 @@ COPY --from=builder /app /app
 RUN chown -R api:python /app
 
 USER api
+ENV WEB_CONCURRENCY=1
 
 EXPOSE 8080
 
-CMD ["poetry", "run", "uvicorn", "main.server:server", "--host", "0.0.0.0", "--port", "8080"]
+CMD ["uvicorn", "main.server:server", "--host", "0.0.0.0", "--port", "8080"]
