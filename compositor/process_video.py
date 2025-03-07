@@ -1,5 +1,5 @@
 import os
-from concurrent.futures import ProcessPoolExecutor
+from concurrent.futures import ThreadPoolExecutor
 
 import cv2
 
@@ -26,7 +26,7 @@ def process_video(temp_dir, image_path, video_path):
     writer = cv2.VideoWriter(processed_video_path, fourcc, fps, (width, height), 1)
 
     results = []
-    with ProcessPoolExecutor(max_workers=os.cpu_count()) as executor:
+    with ThreadPoolExecutor(max_workers=os.cpu_count()) as executor:
         args_list = [(i, frame, back) for i, frame in enumerate(frames)]
         results = list(executor.map(process_frame, args_list))
         
