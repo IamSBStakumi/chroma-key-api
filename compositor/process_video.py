@@ -25,10 +25,13 @@ def process_video(temp_dir, image_path, video_path):
     processed_video_path = f"{temp_dir}/result.mp4"
     writer = cv2.VideoWriter(processed_video_path, fourcc, fps, (width, height), 1)
 
+    results = []
     with ProcessPoolExecutor(max_workers=os.cpu_count()) as executor:
         args_list = [(i, frame, back) for i, frame in enumerate(frames)]
-        for i, output_frame in executor.map(process_frame, args_list):
-            writer.write(output_frame)
+        results = list(executor.map(process_frame, args_list))
+        
+    for i, output_frame in sorted(results, key=lambda x: x[0]):
+        writer.write(output_frame)
 
     # 書き出し先の動画を開放
     writer.release()
