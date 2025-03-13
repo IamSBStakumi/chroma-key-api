@@ -23,7 +23,7 @@ def process_video(temp_dir, image_path, video_path):
     # 書き出し用のwriteクラスを作成
     fourcc = cv2.VideoWriter_fourcc(*"mp4v")
     processed_video_path = f"{temp_dir}/result.mp4"
-    writer = cv2.VideoWriter(processed_video_path, fourcc, fps, (width, height), 1)
+    writer = cv2.VideoWriter(processed_video_path, fourcc, float(fps), (width, height), 1)
 
     results = []
     with ThreadPoolExecutor(max_workers=os.cpu_count()) as executor:
