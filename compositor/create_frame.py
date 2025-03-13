@@ -28,7 +28,7 @@ def create_frame(input_frame, back):
 
     # 背景と合成
     alpha = (transparent_image[:, :, 3] / 255.0)[..., None]
-    output_frame = (back * (1 - alpha) + transparent_image[:, :, :3] * alpha).astype(np.uint8)
+    output_frame = (back * (1 - alpha) + transparent_image[:, :, :3] * alpha)
 
     #メモリ開放
     del contrast_image, hsv_image, chroma_key_mask, mask_image, transparent_image

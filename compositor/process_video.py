@@ -6,24 +6,32 @@ import cv2
 from compositor.create_frame import create_frame
 from utils.read_video_frames import read_video_frames_and_fps
 
+global_back = None
+
+def init_back(image_path, width, height):
+    global global_back
+    global_back = cv2.imread(image_path)
+    global_back = cv2.resize(global_back, (width, height))
+
 def process_frame(args):
     i, frame, back = args
 
-    return i, create_frame(frame, back)
+    return i, create_frame(frame, global_back)
 
 def process_video(temp_dir, image_path, video_path):
+    global global_back
+
     frames, fps = read_video_frames_and_fps(video_path)
     if not frames:
         raise ValueError("動画を読み込めません")
     
     height, width = frames[0].shape[:2]
-    back = cv2.imread(image_path)
-    back = cv2.resize(back, (width, height))
+    init_back(image_path, width, height)
 
     # 書き出し用のwriteクラスを作成
     fourcc = cv2.VideoWriter_fourcc(*"mp4v")
     processed_video_path = f"{temp_dir}/result.mp4"
-    writer = cv2.VideoWriter(processed_video_path, fourcc, fps, (width, height), 1)
+    writer = cv2.VideoWriter(processed_video_path, fourcc, float(fps), (width, height), 1)
 
     results = []
     with ThreadPoolExecutor(max_workers=os.cpu_count()) as executor:
