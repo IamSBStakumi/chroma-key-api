@@ -30,7 +30,7 @@ RUN apt -y update && apt -y upgrade && \
 RUN addgroup --system --gid 1001 python && \
     adduser --system --uid 1001 --shell /usr/sbin/nologin api
 
-COPY --from=builder /usr/local/lib/python3.11/site-packages /usr/local/lib/python3.11/site-packages
+COPY --from=builder /usr/local/lib/python3.12/site-packages /usr/local/lib/python3.12/site-packages
 COPY --from=builder /usr/local/bin /usr/local/bin
 COPY --from=builder /app /app
 
