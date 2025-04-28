@@ -7,6 +7,7 @@ from fastapi.responses import JSONResponse, StreamingResponse
 from moviepy import VideoFileClip
 
 # from functions import init_progress as ip
+from classes import file_operators
 from file_operators.save_temp_file import save_temp_file
 from file_operators.synthesize_audio_file import synthesize_audio_file
 from compositor.process_video import process_video
@@ -16,10 +17,13 @@ executor = ThreadPoolExecutor(max_workers=4)
 
 @router.post("/compose")
 async def compose_movie(image: UploadFile = File(...), video: UploadFile = File(...)):
+    saf = file_operators.synthesize_audio_file
     try:
         with tempfile.TemporaryDirectory() as temp_dir:
-            image_path = await save_temp_file(image, temp_dir, image.filename)
-            video_path = await save_temp_file(video, temp_dir, video.filename)
+            fo = file_operators(temp_dir)
+
+            image_path = await fo.save_temp_file(image, image.filename)
+            video_path = await fo.save_temp_file(video, video.filename)
             print("tempファイル作成")
             try:
                 clip_input = VideoFileClip(video_path)
@@ -34,7 +38,7 @@ async def compose_movie(image: UploadFile = File(...), video: UploadFile = File(
             if clip_input and clip_input.audio:
                 try:
                     print("音声合成開始")
-                    synthesize_audio_file(clip_input, temp_dir, processed_video_path)
+                    fo.synthesize_audio_file(clip_input, processed_video_path)
 
                     # 音声ありの動画をレスポンスとして返す
                     return StreamingResponse(open(f"{temp_dir}/synthesized_result.mp4", "rb"), media_type="video/mp4")
