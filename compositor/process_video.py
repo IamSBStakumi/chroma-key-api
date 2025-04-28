@@ -35,7 +35,7 @@ def process_video(temp_dir, image_path, video_path):
 
     results = []
     with ThreadPoolExecutor(max_workers=os.cpu_count()) as executor:
-        args_list = [(i, frame, back) for i, frame in enumerate(frames)]
+        args_list = [(i, frame) for i, frame in enumerate(frames)]
         results = list(executor.map(process_frame, args_list))
         
     for i, output_frame in sorted(results, key=lambda x: x[0]):
