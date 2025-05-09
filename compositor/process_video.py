@@ -22,20 +22,12 @@ def read_video_frames_generator(video_path):
     cap.release()
     return
 
-# def process_frame(args):
-#     i, frame, back = args
-
-#     return i, create_frame(frame, back)
-
 def process_single_frame(i, frame, back):
     result = create_frame(frame, back)
 
     return i, result
 
 def process_video(temp_dir, image_path, video_path):
-    # frames, fps = read_video_frames_and_fps(video_path)
-    # if not frames:
-    #     raise ValueError("動画を読み込めません")
     cap = cv2.VideoCapture(video_path)
     if not cap.isOpened():
         raise ValueError("動画を開けません")
@@ -63,10 +55,9 @@ def process_video(temp_dir, image_path, video_path):
     if not writer.isOpened():
         raise IOError("VideoWriterの初期化に失敗しました")
 
-    # args_list = [(i, frame, back) for i, frame in enumerate(frames)]
     futures = {}
-    with ProcessPoolExecutor(max_workers=os.cpu_count()) as executor:
-        # results = list(executor.map(process_frame, args_list))
+    # with ProcessPoolExecutor(max_workers=os.cpu_count()) as executor:
+    with ProcessPoolExecutor(max_workers=1) as executor:
         for i, frame in read_video_frames_generator(video_path):
             futures[executor.submit(process_single_frame, i, frame, back)] = i
         
@@ -88,9 +79,6 @@ def process_video(temp_dir, image_path, video_path):
             while next_index in buffer:
                 writer.write(buffer.pop(next_index))
                 next_index += 1
-        
-    # for i, output_frame in sorted(results, key=lambda x: x[0]):
-    #     writer.write(output_frame)
 
     # 書き出し先の動画を開放
     writer.release()

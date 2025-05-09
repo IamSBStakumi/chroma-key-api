@@ -25,7 +25,6 @@ def create_frame(input_frame, back):
     chroma_key_mask = cv2.inRange(hsv_image, lower_green, upper_green)
 
     # ノイズ除去
-    # mask_image = cv2.GaussianBlur(255 - chroma_key_mask, (5, 5), 0)
     kernel = cv2.getStructuringElement(cv2.MORPH_ELLIPSE, (5, 5))
     clean_mask = cv2.morphologyEx(chroma_key_mask, cv2.MORPH_OPEN, kernel)
     clean_mask = cv2.morphologyEx(clean_mask, cv2.MORPH_CLOSE, kernel)
