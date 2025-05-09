@@ -22,7 +22,7 @@ WORKDIR /app
 
 # パッケージ更新、OpenCVインストール、キャッシュ削除
 RUN apt -y update && apt -y upgrade && \
-    apt install -y libopencv-dev && \
+    apt install -y ffmpeg libopencv-dev && \
     apt-get clean && \
     rm -rf /var/lib/apt/lists/*
 
