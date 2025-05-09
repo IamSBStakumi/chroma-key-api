@@ -21,7 +21,7 @@ def read_video_frames_generator(video_path):
         yield index, frame
         index += 1
 
-    cap.release
+    cap.release()
     return
 
 # def process_frame(args):
