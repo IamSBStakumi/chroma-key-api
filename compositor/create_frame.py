@@ -43,7 +43,7 @@ def create_frame(input_frame, back):
     output_frame = (back * (1 - alpha) + transparent_image[:, :, :3] * alpha).astype(np.uint8)
 
     #メモリ開放
-    del contrast_image, hsv_image, chroma_key_mask, mask_image, transparent_image
-    gc.collect()
+    # del contrast_image, hsv_image, chroma_key_mask, mask_image, transparent_image
+    # gc.collect()
 
     return output_frame
