@@ -4,7 +4,6 @@ from concurrent.futures import ProcessPoolExecutor, as_completed
 import cv2
 
 from compositor.create_frame import create_frame
-from utils.read_video_frames import read_video_frames_and_fps
 
 def read_video_frames_generator(video_path):
     cap = cv2.VideoCapture(video_path)
@@ -12,7 +11,6 @@ def read_video_frames_generator(video_path):
     if not cap.isOpened():
         raise ValueError(f"動画を読み込めません: {video_path}")
     
-    fps = cap.get(cv2.CAP_PROP_FPS)
     index = 0
     while True:
         ret, frame = cap.read()
@@ -42,13 +40,16 @@ def process_video(temp_dir, image_path, video_path):
     if not cap.isOpened():
         raise ValueError("動画を開けません")
     
+    fps = cap.get(cv2.CAP_PROP_FPS)
+    if fps <= 0:
+        fps = 30
+    
     ret, sample_frame = cap.read()
     cap.release()
     if not ret:
         raise ValueError("動画からフレームを取得できません")
     
     height, width = sample_frame.shape[:2]
-    fps = cv2.VideoCapture(video_path).get(cv2.CAP_PROP_FPS)
 
     back = cv2.imread(image_path)
     if back is None:
@@ -75,6 +76,12 @@ def process_video(temp_dir, image_path, video_path):
 
         for future in as_completed(futures):
             i, output_frame = future.result()
+            if output_frame.shape[:2] != (height, width):
+                output_frame = cv2.resize(output_frame, (width, height))
+
+            if output_frame.shape[2] == 4:
+                output_frame = cv2.cvtColor(output_frame, cv2.COLOR_BGRA2BGR)
+
             buffer[i] = output_frame
 
             # 順序通り書き込む（アウト・オブ・オーダー防止）
