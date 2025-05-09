@@ -1,9 +1,10 @@
 import os
 import tempfile
+import subprocess
 from concurrent.futures import ThreadPoolExecutor
 
 from fastapi import APIRouter, File, UploadFile
-from fastapi.responses import JSONResponse, StreamingResponse
+from fastapi.responses import JSONResponse, FileResponse
 from moviepy import VideoFileClip
 
 # from functions import init_progress as ip
@@ -30,20 +31,33 @@ async def compose_movie(image: UploadFile = File(...), video: UploadFile = File(
             print("動画合成開始")
             processed_video_path = process_video(temp_dir, image_path, video_path)
 
+            final_output = os.path.join(temp_dir, "final_result.mp4")
+            ffmpeg_cmd = [
+                "ffmpeg", "-y", "-i", processed_video_path,
+                "-c:v", "libx264", "-crf", "23", "-preset", "fast",
+                "-movflags", "+faststart",
+                final_output
+            ]
+            subprocess.run(ffmpeg_cmd, check=True)
+
             # 音声トラックを動画に追加
             if clip_input and clip_input.audio:
                 try:
                     print("音声合成開始")
-                    synthesize_audio_file(clip_input, temp_dir, processed_video_path)
+                    synthesize_audio_file(clip_input, temp_dir, final_output)
 
                     # 音声ありの動画をレスポンスとして返す
-                    return StreamingResponse(open(f"{temp_dir}/synthesized_result.mp4", "rb"), media_type="video/mp4")
+                    return FileResponse(path=f"{temp_dir}/synthesized_result.mp4", 
+                                        media_type="video/mp4", 
+                                        filename="synthesized_result.mp4")
                 except Exception as e:
                     return JSONResponse(content={"error": f"音声追加中にエラーが発生しました: {e}"})
 
             # 音声なしの動画をレスポンスとして返す
             if os.path.exists(processed_video_path):
-                return StreamingResponse(open(processed_video_path, "rb"), media_type="video/mp4")
+                return FileResponse(path=final_output,
+                                    media_type="video/mp4",
+                                    filename="final_result.mp4")
             else:
                 return JSONResponse(content={"error": "video file not found"})
 
