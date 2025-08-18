@@ -12,8 +12,8 @@ RUN apt -y update && \
 
 COPY pyproject.toml poetry.lock ./
 
-RUN poetry config virtualenvs.create false
-RUN poetry sync install --without dev
+RUN poetry config virtualenvs.create false && \
+    poetry install --without dev
 
 COPY . ./
 
