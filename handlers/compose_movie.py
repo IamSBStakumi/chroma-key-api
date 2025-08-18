@@ -4,12 +4,6 @@ import subprocess
 
 from fastapi import APIRouter, File, UploadFile
 from fastapi.responses import JSONResponse, StreamingResponse
-from moviepy import VideoFileClip
-
-# from functions import init_progress as ip
-from file_operators.save_temp_file import save_temp_file
-from file_operators.synthesize_audio_file import synthesize_audio_file
-from compositor.process_video import process_video
 
 router = APIRouter()
 
@@ -17,52 +11,37 @@ router = APIRouter()
 async def compose_movie(image: UploadFile = File(...), video: UploadFile = File(...)):
     try:
         with tempfile.TemporaryDirectory() as temp_dir:
-            image_path = await save_temp_file(image, temp_dir, image.filename)
-            video_path = await save_temp_file(video, temp_dir, video.filename)
-            print("tempファイル作成")
-            try:
-                clip_input = VideoFileClip(video_path)
-            except OSError as e:
-                print(f"動画が開けませんでした: {e}")
-                clip_input = None
+            image_path = os.path.join(temp_dir, image.filename)
+            video_path = os.path.join(temp_dir, video.filename)
+            output_path = os.path.join(temp_dir, "output.mp4")
 
-            print("動画合成開始")
-            processed_video_path = process_video(temp_dir, image_path, video_path)
+            # 一時保存
+            with open(image_path, "wb") as f:
+                f.write(await image.read())
+            with open(video_path, "wb") as f:
+                f.write(await video.read())
 
-            final_output = os.path.join(temp_dir, "final_result.mp4")
+            # ffmpegコマンドでクロマキー合成
             ffmpeg_cmd = [
-                "ffmpeg", "-y", "-i", processed_video_path,
-                "-c:v", "libx264", "-crf", "23", "-preset", "fast",
+                "ffmpeg", "-y",
+                "-i", video_path, "-i", image_path,
+                "-filter_complex", "[0:v]chromakey=0x00FF00:0.1:0.2[fg];[1:v][fg]overlay=0:0[out]",
+                "-map", "[out]", "-map", "0:a?",
+                "-c:v", "libx264", "-preset", "ultrafast", "-crf", "23",
+                "-c:a", "aac",
                 "-movflags", "+faststart",
-                final_output
+                output_path
             ]
             subprocess.run(ffmpeg_cmd, check=True)
 
-            # 音声トラックを動画に追加
-            if clip_input and clip_input.audio:
-                try:
-                    print("音声合成開始")
-                    synthesize_audio_file(clip_input, temp_dir, processed_video_path)
+            file_size = os.path.getsize(output_path)
 
-                    # 音声ありの動画をレスポンスとして返す
-                    file_size = os.path.getsize(f"{temp_dir}/synthesized_result.mp4")
-                    return StreamingResponse(open(f"{temp_dir}/synthesized_result.mp4", "rb"),
-                            media_type="video/mp4",
-                            headers={"Content-Disposition": "attachment; filename=synthesized_result.mp4", "Content-Length": str(file_size)})
-
-                except Exception as e:
-                    return JSONResponse(content={"error": f"音声追加中にエラーが発生しました: {e}"})
-
-            # 音声なしの動画をレスポンスとして返す
-            if os.path.exists(processed_video_path):
-                file_size = os.path.getsize(final_output)
-                return StreamingResponse(open(final_output, "rb"),
-                                         media_type="video/mp4",
-                                         headers={"Content-Disposition": "attachment; filename=final_result.mp4", "Content-Length": str(file_size)})
-            else:
-                return JSONResponse(content={"error": "video file not found"})
+            return StreamingResponse(open(output_path, "rb"),
+                                     media_type="video/mp4",
+                                     headers={
+                                         "Content-Disposition": "attachment; filename=output.mp4",
+                                         "Content-Length": str(file_size)
+                                     })
 
     except Exception as e:
-        print("エラーが発生")
-        print(e)
         return JSONResponse(content={"error": str(e)}, status_code=500)
