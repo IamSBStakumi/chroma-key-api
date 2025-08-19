@@ -25,7 +25,9 @@ async def compose_movie(image: UploadFile = File(...), video: UploadFile = File(
             ffmpeg_cmd = [
                 "ffmpeg", "-y",
                 "-i", video_path, "-i", image_path,
-                "-filter_complex", "[0:v]chromakey=0x00FF00:0.1:0.2[fg];[1:v][fg]overlay=0:0[out]",
+                "-filter_complex", "[1:v][0:v]scale2ref=w=iw:h=ih[bg][fg]",
+                "[fg]chromakey=0x00FF00:0.1:0.2[ck];",
+                "[bg][fg]overlay=0:0[out]",
                 "-map", "[out]", "-map", "0:a?",
                 "-c:v", "libx264", "-preset", "ultrafast", "-crf", "23",
                 "-c:a", "aac",
@@ -36,7 +38,10 @@ async def compose_movie(image: UploadFile = File(...), video: UploadFile = File(
 
             file_size = os.path.getsize(output_path)
 
-            return StreamingResponse(open(output_path, "rb"),
+            with open(output_path, "rb") as f:
+                data = f.read()
+
+            return StreamingResponse(iter([data]),
                                      media_type="video/mp4",
                                      headers={
                                          "Content-Disposition": "attachment; filename=output.mp4",
