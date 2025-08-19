@@ -33,7 +33,7 @@ async def compose_movie(image: UploadFile = File(...), video: UploadFile = File(
                 "ffmpeg", "-y",
                 "-i", video_path, "-i", image_path,
                 "-filter_complex", 
-                "[1:v][0:v]scale2ref=w=iw:h=ih[bg][fg];"
+                "[1:v][0:v]scale2ref=iw:ih[bg][fg];"
                 "[fg]chromakey=0x00FF00:0.1:0.2[ck];"
                 "[bg][ck]overlay=0:0[out]",
                 "-map", "[out]", "-map", "0:a?",
@@ -42,7 +42,19 @@ async def compose_movie(image: UploadFile = File(...), video: UploadFile = File(
                 "-movflags", "+faststart",
                 output_path
             ]
-            subprocess.run(ffmpeg_cmd, check=True)
+
+            ## ffmpegを実行(標準出力と標準エラーをログ出力)
+            try:
+                subprocess.run(ffmpeg_cmd, check=True, stdout=subprocess.PIPE, stderr=subprocess.PIPE, text=True)
+            except subprocess.CalledProcessError as e:
+                print("stdout: e.stdout")
+                print("stderr: e.stderr")
+                return JSONResponse(content={"error": f"FFmpeg error: {e.stderr}"}, status_code=500)
+
+            # 出力ファイルが作成されているか確認
+            if not os.path.exists(output_path):
+                return JSONResponse(
+                    content={"error": "Output file was not created"}, status_code=500) 
 
             return StreamingResponse(iterFile(output_path),
                                      media_type="video/mp4",
