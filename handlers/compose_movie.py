@@ -7,6 +7,10 @@ from fastapi.responses import JSONResponse, StreamingResponse
 
 router = APIRouter()
 
+def iterFile(file_path: str):
+    with open(file_path, "rb") as f:
+        yield from f        # 少しずつストリーミングを返す
+
 @router.post("/compose")
 async def compose_movie(image: UploadFile = File(...), video: UploadFile = File(...)):
     try:
@@ -28,9 +32,10 @@ async def compose_movie(image: UploadFile = File(...), video: UploadFile = File(
             ffmpeg_cmd = [
                 "ffmpeg", "-y",
                 "-i", video_path, "-i", image_path,
-                "-filter_complex", "[1:v][0:v]scale2ref=w=iw:h=ih[bg][fg]",
-                "[fg]chromakey=0x00FF00:0.1:0.2[ck];",
-                "[bg][fg]overlay=0:0[out]",
+                "-filter_complex", 
+                "[1:v][0:v]scale2ref=w=iw:h=ih[bg][fg]"         # 画像を動画のサイズと一致するようリサイズ
+                "[fg]chromakey=0x00FF00:0.1:0.2[ck];"           # クロマキー処理
+                "[bg][fg]overlay=0:0[out]",                     # 背景中央に画像を配置
                 "-map", "[out]", "-map", "0:a?",
                 "-c:v", "libx264", "-preset", "ultrafast", "-crf", "23",
                 "-c:a", "aac",
@@ -39,16 +44,11 @@ async def compose_movie(image: UploadFile = File(...), video: UploadFile = File(
             ]
             subprocess.run(ffmpeg_cmd, check=True)
 
-            file_size = os.path.getsize(output_path)
-
-            with open(output_path, "rb") as f:
-                data = f.read()
-
-            return StreamingResponse(iter([data]),
+            return StreamingResponse(iterFile(output_path),
                                      media_type="video/mp4",
                                      headers={
                                          "Content-Disposition": "attachment; filename=output.mp4",
-                                         "Content-Length": str(file_size)
+                                         "Content-Length": str(os.path.getsize(output_path))
                                      })
 
     except Exception as e:
