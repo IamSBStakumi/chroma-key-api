@@ -8,14 +8,18 @@ from fastapi.responses import JSONResponse, StreamingResponse
 
 router = APIRouter()
 
-def iterFile(file_path: str):
+def iterFile(file_path: str, temp_dir: str):
     # ジェネレータで少しずつ読み込み。終了後に削除
     try:
         with open(file_path, "rb") as f:
             yield from f
     finally:
+        # 一時ファイルを削除
         if os.path.exists(file_path):
             os.remove(file_path)
+        # 一時ディレクトリを削除
+        if os.path.exists(temp_dir):
+            shutil.rmtree(temp_dir, ignore_errors=True)
 
 @router.post("/compose")
 async def compose_movie(image: UploadFile = File(...), video: UploadFile = File(...)):
@@ -62,7 +66,7 @@ async def compose_movie(image: UploadFile = File(...), video: UploadFile = File(
             return JSONResponse(
                 content={"error": "Output file was not created"}, status_code=500) 
 
-        return StreamingResponse(iterFile(output_path),
+        return StreamingResponse(iterFile(output_path, temp_dir),
                                     media_type="video/mp4",
                                     headers={
                                         "Content-Disposition": "attachment; filename=output.mp4",
@@ -71,7 +75,3 @@ async def compose_movie(image: UploadFile = File(...), video: UploadFile = File(
 
     except Exception as e:
         return JSONResponse(content={"error": str(e)}, status_code=500)
-    finally:
-        # ディレクトリごと削除
-        if os.path.exists(temp_dir):
-            shutil.rmtree(temp_dir, ignore_errors=True)
