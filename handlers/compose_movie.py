@@ -35,7 +35,7 @@ async def compose_movie(image: UploadFile = File(...), video: UploadFile = File(
                 "-filter_complex", 
                 "[1:v][0:v]scale2ref=w=iw:h=ih[bg][fg]"         # 画像を動画のサイズと一致するようリサイズ
                 "[fg]chromakey=0x00FF00:0.1:0.2[ck];"           # クロマキー処理
-                "[bg][fg]overlay=0:0[out]",                     # 背景中央に画像を配置
+                "[bg][ck]overlay=0:0[out]",                     # 背景中央に動画を配置
                 "-map", "[out]", "-map", "0:a?",
                 "-c:v", "libx264", "-preset", "ultrafast", "-crf", "23",
                 "-c:a", "aac",
