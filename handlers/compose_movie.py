@@ -55,7 +55,9 @@ async def compose_movie(image: UploadFile = File(...), video: UploadFile = File(
 
         ## ffmpegを実行(標準出力と標準エラーをログ出力)
         try:
-            subprocess.run(ffmpeg_cmd, check=True, stdout=subprocess.PIPE, stderr=subprocess.PIPE, text=True)
+            result = subprocess.run(ffmpeg_cmd, check=True, stdout=subprocess.PIPE, stderr=subprocess.PIPE, text=True)
+            print("stdout:", result.stdout)
+            print("stderr:", result.stderr)
         except subprocess.CalledProcessError as e:
             print("stdout: e.stdout")
             print("stderr: e.stderr")
