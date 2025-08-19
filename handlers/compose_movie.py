@@ -11,8 +11,11 @@ router = APIRouter()
 async def compose_movie(image: UploadFile = File(...), video: UploadFile = File(...)):
     try:
         with tempfile.TemporaryDirectory() as temp_dir:
-            image_path = os.path.join(temp_dir, image.filename)
-            video_path = os.path.join(temp_dir, video.filename)
+            image_ext = os.path.splitext(image.filename)[1]         # 画像ファイルの拡張子を取得
+            video_ext = os.path.splitext(video.filename)[1]         # 動画ファイルの拡張子を取得
+
+            image_path = os.path.join(temp_dir, f"background{image_ext}")
+            video_path = os.path.join(temp_dir, f"input{video_ext}")
             output_path = os.path.join(temp_dir, "output.mp4")
 
             # 一時保存
