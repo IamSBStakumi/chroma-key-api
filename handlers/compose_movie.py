@@ -36,7 +36,10 @@ async def compose_movie(image: UploadFile = File(...), video: UploadFile = File(
 
             file_size = os.path.getsize(output_path)
 
-            return StreamingResponse(open(output_path, "rb"),
+            with open(output_path, "rb") as f:
+                data = f.read()
+
+            return StreamingResponse(iter([data]),
                                      media_type="video/mp4",
                                      headers={
                                          "Content-Disposition": "attachment; filename=output.mp4",
