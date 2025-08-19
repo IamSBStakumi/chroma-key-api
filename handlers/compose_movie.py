@@ -43,9 +43,7 @@ async def compose_movie(image: UploadFile = File(...), video: UploadFile = File(
             "ffmpeg", "-y",
             "-i", video_path, "-i", image_path,
             "-filter_complex", 
-            "[1:v][0:v]scale2ref=iw:ih[bg][fg];"
-            "[fg]chromakey=0x00FF00:0.1:0.2[ck];"
-            "[bg][ck]overlay=0:0[out]",
+            "[0:v]chromakey=0x00FF00:0.1:0.2[ck];[1:v][ck]scale2ref=iw:ih[bg][fg2];[bg][fg2]overlay=0:0[out]",
             "-map", "[out]", "-map", "0:a?",
             "-c:v", "libx264", "-preset", "ultrafast", "-crf", "23",
             "-c:a", "aac",
