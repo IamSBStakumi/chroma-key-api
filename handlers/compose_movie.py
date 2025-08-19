@@ -7,10 +7,6 @@ from fastapi.responses import JSONResponse, StreamingResponse
 
 router = APIRouter()
 
-def iterFile(file_path: str):
-    with open(file_path, "rb") as f:
-        yield from f        # 少しずつストリーミングを返す
-
 @router.post("/compose")
 async def compose_movie(image: UploadFile = File(...), video: UploadFile = File(...)):
     try:
@@ -54,7 +50,11 @@ async def compose_movie(image: UploadFile = File(...), video: UploadFile = File(
             # 出力ファイルが作成されているか確認
             if not os.path.exists(output_path):
                 return JSONResponse(
-                    content={"error": "Output file was not created"}, status_code=500) 
+                    content={"error": "Output file was not created"}, status_code=500)
+            
+            def iterFile(file_path: str):
+                with open(file_path, "rb") as f:
+                    yield from f        # 少しずつストリーミングを返す
 
             return StreamingResponse(iterFile(output_path),
                                      media_type="video/mp4",
