@@ -38,13 +38,13 @@ async def compose_movie(image: UploadFile = File(...), video: UploadFile = File(
         with open(video_path, "wb") as f:
             f.write(await video.read())
 
-        # ffmpegコマンドでクロマキー合成
+        # ffmpegコマンドで合成
         ffmpeg_cmd = [
             "ffmpeg", "-y",
             "-i", video_path, 
             "-loop", "1" , "-i", image_path,
             "-filter_complex", 
-            "[0:v]chromakey=0x00FF00:0.1:0.2[ck];[1:v][ck]scale2ref=iw:ih[bg][fg2];[bg][fg2]overlay=0:0[out]",
+            "[0:v]hqdn3d,format=rgba,colorkey=0x00FF00:0.28:0.1[ck];[1:v][ck]scale2ref=iw:ih[bg][fg];[bg][fg]overlay=0:0:format=auto[out]",
             "-map", "[out]", "-map", "0:a?",
             "-c:v", "libx264", "-preset", "ultrafast", "-crf", "23",
             "-c:a", "aac",
