@@ -12,11 +12,14 @@ def process_frame(args):
     return i, create_frame_beta(frame, back, model)
 
 def process_video_beta(temp_dir, image_path, video_path):
-    frames, fps = read_video_frames_and_fps(video_path)
-    if not frames:
+    frames_iter, fps = read_video_frames_and_fps(video_path)
+    
+    try:
+        first_frame = next(frames_iter)
+    except StopIteration:
         raise ValueError("動画を読み込めません")
     
-    height, width = frames[0].shape[:2]
+    height, width = first_frame.shape[:2]
     back = cv2.imread(image_path)
     back = cv2.resize(back, (width, height))
 
@@ -29,8 +32,12 @@ def process_video_beta(temp_dir, image_path, video_path):
     model = cv2.createBackgroundSubtractorMOG2()
 
     # MOG2は履歴に依存するためシーケンシャルに処理する
-    results = []
-    for i, frame in enumerate(frames):
+    # 最初のフレームを処理
+    output_frame = create_frame_beta(first_frame, back, model)
+    writer.write(output_frame)
+
+    # 残りのフレームを処理
+    for i, frame in enumerate(frames_iter):
         # 処理
         output_frame = create_frame_beta(frame, back, model)
         writer.write(output_frame)
