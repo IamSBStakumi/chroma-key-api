@@ -48,12 +48,16 @@ def process_video(temp_dir, image_path, video_path):
     # 残りのフレームをバッチ処理で並列化
     from concurrent.futures import ThreadPoolExecutor
     
-    BATCH_SIZE = 30  # 1秒分のフレーム(30fps想定)をバッチ処理
+    # OpenCVのスレッド数を明示的に設定
+    cv2.setNumThreads(0)  # 0 = 自動(全コア使用)
+    
+    BATCH_SIZE = 90  # 3秒分のフレーム(30fps想定)をバッチ処理
+    MAX_WORKERS = 16  # スレッド数を増やしてI/O待機時間をカバー
     batch = []
     
     def process_batch(frames_batch):
         """バッチ内のフレームを並列処理"""
-        with ThreadPoolExecutor(max_workers=8) as executor:
+        with ThreadPoolExecutor(max_workers=MAX_WORKERS) as executor:
             return list(executor.map(lambda f: create_frame(f, back), frames_batch))
     
     for frame in frames_iter:
