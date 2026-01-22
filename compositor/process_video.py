@@ -86,41 +86,6 @@ def process_video(temp_dir, image_path, video_path):
         print(f"バッチ処理: {len(frames_batch)}フレーム, {batch_time:.2f}秒, {len(frames_batch)/batch_time:.1f} FPS")
         return result
 
-    # 非同期書き込み用のキューとスレッド
-    import queue
-    import threading
-    
-    write_queue = queue.Queue(maxsize=200)  # 最大200フレームをバッファ
-    write_complete = threading.Event()
-    
-    def async_writer():
-        """別スレッドでフレームを書き込み"""
-        frames_written = 0
-        while True:
-            try:
-                frame = write_queue.get(timeout=1)
-                if frame is None:  # 終了シグナル
-                    break
-                
-                # サイズ/カラー調整
-                if frame.shape[:2] != (height, width):
-                    frame = cv2.resize(frame, (width, height))
-                
-                if frame.shape[2] == 4:
-                    frame = cv2.cvtColor(frame, cv2.COLOR_BGRA2BGR)
-                
-                writer.write(frame)
-                frames_written += 1
-                write_queue.task_done()
-            except queue.Empty:
-                continue
-        
-        print(f"書き込み完了: {frames_written}フレーム")
-        write_complete.set()
-    
-    # 書き込みスレッドを開始
-    writer_thread = threading.Thread(target=async_writer, daemon=True)
-    writer_thread.start()
     
     for frame in frames_iter:
         batch.append(frame)
@@ -131,9 +96,16 @@ def process_video(temp_dir, image_path, video_path):
             output_frames = process_batch(batch)
             total_frames_processed += len(batch)
             
-            # 処理済みフレームをキューに追加(非同期書き込み)
+            # 処理済みフレームを書き込み
             for output_frame in output_frames:
-                write_queue.put(output_frame)
+                # サイズ/カラー調整
+                if output_frame.shape[:2] != (height, width):
+                    output_frame = cv2.resize(output_frame, (width, height))
+                
+                if output_frame.shape[2] == 4:
+                    output_frame = cv2.cvtColor(output_frame, cv2.COLOR_BGRA2BGR)
+                
+                writer.write(output_frame)
             
             batch = []
     
@@ -143,14 +115,15 @@ def process_video(temp_dir, image_path, video_path):
         output_frames = process_batch(batch)
         total_frames_processed += len(batch)
         for output_frame in output_frames:
-            write_queue.put(output_frame)
+            if output_frame.shape[:2] != (height, width):
+                output_frame = cv2.resize(output_frame, (width, height))
+            
+            if output_frame.shape[2] == 4:
+                output_frame = cv2.cvtColor(output_frame, cv2.COLOR_BGRA2BGR)
+            
+            writer.write(output_frame)
 
     print(f"並列処理完了: 合計{total_frames_processed}フレーム, {batch_count}バッチ")
-    
-    # 書き込みスレッドの完了を待つ
-    write_queue.put(None)  # 終了シグナル
-    write_queue.join()
-    write_complete.wait(timeout=60)
 
     # 書き出し先の動画を開放
     writer.release()
