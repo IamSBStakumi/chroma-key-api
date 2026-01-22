@@ -28,10 +28,12 @@ def process_video_beta(temp_dir, image_path, video_path):
     # 背景差分を計算するモデル
     model = cv2.createBackgroundSubtractorMOG2()
 
-    with ProcessPoolExecutor(max_workers=os.cpu_count()) as executor:
-        args_list = [(i, frame, back, model) for i, frame in enumerate(frames)]
-        for i, output_frame in executor.map(process_video_beta, args_list):
-            writer.write(output_frame)
+    # MOG2は履歴に依存するためシーケンシャルに処理する
+    results = []
+    for i, frame in enumerate(frames):
+        # 処理
+        output_frame = create_frame_beta(frame, back, model)
+        writer.write(output_frame)
 
     # 読み込んだ動画と書き出し先の動画を開放
     writer.release()
