@@ -38,6 +38,13 @@ COPY --from=builder /app /app
 RUN chown -R api:python /app
 
 USER api
+
+# OpenCV multithreading configuration
+ENV OPENCV_THREAD_NUM=8
+ENV OMP_NUM_THREADS=8
+ENV OPENBLAS_NUM_THREADS=8
+ENV MKL_NUM_THREADS=8
+
 ENV WEB_CONCURRENCY=1
 
 EXPOSE 8080
