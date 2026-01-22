@@ -1,15 +1,9 @@
 import os
-from concurrent.futures import ProcessPoolExecutor
 
 import cv2
 
 from compositor_beta.create_frame_beta import create_frame_beta
 from utils.read_video_frames import read_video_frames_and_fps
-
-def process_frame(args):
-    i, frame, back, model = args
-
-    return i, create_frame_beta(frame, back, model)
 
 def process_video_beta(temp_dir, image_path, video_path):
     frames_iter, fps = read_video_frames_and_fps(video_path)
