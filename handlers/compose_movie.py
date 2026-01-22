@@ -5,15 +5,21 @@ from concurrent.futures import ThreadPoolExecutor
 
 from fastapi import APIRouter, File, UploadFile, BackgroundTasks
 from fastapi.responses import JSONResponse, StreamingResponse
-from moviepy import VideoFileClip
-
-# from functions import init_progress as ip
-from file_operators.save_temp_file import save_temp_file
-from file_operators.synthesize_audio_file import synthesize_audio_file
-from compositor.process_video import process_video
 
 router = APIRouter()
-executor = ThreadPoolExecutor(max_workers=4)
+
+def iterFile(file_path: str, temp_dir: str):
+    # ジェネレータで少しずつ読み込み。終了後に削除
+    try:
+        with open(file_path, "rb") as f:
+            yield from f
+    finally:
+        # 一時ファイルを削除
+        if os.path.exists(file_path):
+            os.remove(file_path)
+        # 一時ディレクトリを削除
+        if os.path.exists(temp_dir):
+            shutil.rmtree(temp_dir, ignore_errors=True)
 
 @router.post("/compose")
 async def compose_movie(background_tasks: BackgroundTasks, image: UploadFile = File(...), video: UploadFile = File(...)):
@@ -46,11 +52,17 @@ async def compose_movie(background_tasks: BackgroundTasks, image: UploadFile = F
                 except Exception as e:
                     return JSONResponse(content={"error": f"音声追加中にエラーが発生しました: {e}"})
 
-            # 音声なしの動画をレスポンスとして返す
-            if os.path.exists(processed_video_path):
-                return StreamingResponse(open(processed_video_path, "rb"), media_type="video/mp4")
-            else:
-                return JSONResponse(content={"error": "video file not found"})
+        # 出力ファイルが作成されているか確認
+        if not os.path.exists(output_path):
+            return JSONResponse(
+                content={"error": "Output file was not created"}, status_code=500) 
+
+        return StreamingResponse(iterFile(output_path, temp_dir),
+                                    media_type="video/mp4",
+                                    headers={
+                                        "Content-Disposition": "attachment; filename=output.mp4",
+                                        "Content-Length": str(os.path.getsize(output_path))
+                                    })
 
     except Exception as e:
         # エラー発生時は即座に一時ディレクトリを削除（作成されていた場合）

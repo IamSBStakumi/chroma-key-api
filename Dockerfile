@@ -1,4 +1,4 @@
-FROM python:3.11.9-slim-bullseye AS base
+FROM python:3.13.7-slim-trixie AS base
 FROM base AS builder
 
 RUN pip install poetry
@@ -13,7 +13,7 @@ RUN apt -y update && \
 COPY pyproject.toml poetry.lock ./
 
 RUN poetry config virtualenvs.create false && \
-    poetry install --without dev --sync
+    poetry install --without dev
 
 COPY . ./
 
@@ -22,7 +22,7 @@ WORKDIR /app
 
 # パッケージ更新、OpenCVインストール、キャッシュ削除
 RUN apt -y update && apt -y upgrade && \
-    apt install -y libopencv-dev && \
+    apt install -y ffmpeg libopencv-dev && \
     apt-get clean && \
     rm -rf /var/lib/apt/lists/*
 
@@ -30,7 +30,7 @@ RUN apt -y update && apt -y upgrade && \
 RUN addgroup --system --gid 1001 python && \
     adduser --system --uid 1001 --shell /usr/sbin/nologin api
 
-COPY --from=builder /usr/local/lib/python3.11/site-packages /usr/local/lib/python3.11/site-packages
+COPY --from=builder /usr/local/lib/python3.13/site-packages /usr/local/lib/python3.13/site-packages
 COPY --from=builder /usr/local/bin /usr/local/bin
 COPY --from=builder /app /app
 
