@@ -20,7 +20,7 @@ async def compose_movie_beta(background_tasks: BackgroundTasks, image: UploadFil
         print("ベータ版のAPIが呼び出されました")
         # 一時ディレクトリを手動で作成し、バックグラウンドタスクで削除を予約
         temp_dir = tempfile.mkdtemp()
-        background_tasks.add_task(shutil.rmtree, temp_dir)
+        background_tasks.add_task(shutil.rmtree, temp_dir, ignore_errors=True)
 
         image_path = await save_temp_file(image, temp_dir, image.filename)
         video_path = await save_temp_file(video, temp_dir, video.filename)
