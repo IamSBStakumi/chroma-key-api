@@ -26,18 +26,32 @@ def process_video(temp_dir, image_path, video_path):
 
 
     # 書き出し用のwriteクラスを作成
-    # H.264コーデック(avc1)を優先、利用できない場合はmp4vにフォールバック
-    try:
-        fourcc = cv2.VideoWriter_fourcc(*"avc1")
-        writer = cv2.VideoWriter(processed_video_path, fourcc, fps, (width, height), True)
-        if not writer.isOpened():
-            raise IOError("avc1 codec not available")
-    except (IOError, cv2.error):
-        print("avc1コーデックが利用できないため、mp4vを使用します")
-        fourcc = cv2.VideoWriter_fourcc(*"mp4v")
-        writer = cv2.VideoWriter(processed_video_path, fourcc, fps, (width, height), True)
-        if not writer.isOpened():
-            raise IOError("VideoWriterの初期化に失敗しました")
+    # 利用可能なコーデックを順番に試す
+    codecs_to_try = [
+        ("X264", "x264"),  # H.264 (最も互換性が高い)
+        ("H264", "h264"),  # H.264の別名
+        ("mp4v", "mp4v"),  # MPEG-4 (フォールバック)
+    ]
+    
+    writer = None
+    used_codec = None
+    
+    for codec_name, codec_code in codecs_to_try:
+        try:
+            fourcc = cv2.VideoWriter_fourcc(*codec_code)
+            writer = cv2.VideoWriter(processed_video_path, fourcc, fps, (width, height), True)
+            if writer.isOpened():
+                used_codec = codec_name
+                print(f"使用コーデック: {codec_name}")
+                break
+            else:
+                writer.release()
+        except Exception as e:
+            print(f"{codec_name}コーデック初期化失敗: {e}")
+            continue
+    
+    if not writer or not writer.isOpened():
+        raise IOError("利用可能なVideoWriterコーデックが見つかりません")
 
 
 
@@ -47,25 +61,40 @@ def process_video(temp_dir, image_path, video_path):
 
     # 残りのフレームをバッチ処理で並列化
     from concurrent.futures import ThreadPoolExecutor
+    import time
     
     # OpenCVのスレッド数を明示的に設定
     cv2.setNumThreads(0)  # 0 = 自動(全コア使用)
     
-    BATCH_SIZE = 90  # 3秒分のフレーム(30fps想定)をバッチ処理
+    # バッチサイズをfpsに応じて動的に調整
+    # 低fpsの動画でも並列処理が効くように、最小30フレームを確保
+    BATCH_SIZE = max(30, int(fps * 2))  # 2秒分のフレーム、最小30
     MAX_WORKERS = 16  # スレッド数を増やしてI/O待機時間をカバー
     batch = []
     
+    print(f"並列処理設定: バッチサイズ={BATCH_SIZE}, ワーカー数={MAX_WORKERS}, FPS={fps}")
+    
+    total_frames_processed = 0
+    batch_count = 0
+    
     def process_batch(frames_batch):
         """バッチ内のフレームを並列処理"""
+        batch_start = time.time()
         with ThreadPoolExecutor(max_workers=MAX_WORKERS) as executor:
-            return list(executor.map(lambda f: create_frame(f, back), frames_batch))
+            result = list(executor.map(lambda f: create_frame(f, back), frames_batch))
+        batch_time = time.time() - batch_start
+        print(f"バッチ処理: {len(frames_batch)}フレーム, {batch_time:.2f}秒, {len(frames_batch)/batch_time:.1f} FPS")
+        return result
+
     
     for frame in frames_iter:
         batch.append(frame)
         
         if len(batch) >= BATCH_SIZE:
             # バッチを並列処理
+            batch_count += 1
             output_frames = process_batch(batch)
+            total_frames_processed += len(batch)
             
             # 処理済みフレームを書き込み
             for output_frame in output_frames:
@@ -82,7 +111,9 @@ def process_video(temp_dir, image_path, video_path):
     
     # 残りのフレームを処理
     if batch:
+        batch_count += 1
         output_frames = process_batch(batch)
+        total_frames_processed += len(batch)
         for output_frame in output_frames:
             if output_frame.shape[:2] != (height, width):
                 output_frame = cv2.resize(output_frame, (width, height))
@@ -91,6 +122,8 @@ def process_video(temp_dir, image_path, video_path):
                 output_frame = cv2.cvtColor(output_frame, cv2.COLOR_BGRA2BGR)
             
             writer.write(output_frame)
+
+    print(f"並列処理完了: 合計{total_frames_processed}フレーム, {batch_count}バッチ")
 
     # 書き出し先の動画を開放
     writer.release()
