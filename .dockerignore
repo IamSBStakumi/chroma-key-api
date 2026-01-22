@@ -1,7 +1,8 @@
 .git
 .gitignore
 
-tests
+tests/**
+.pytest_cache/**
 
 Dockerfile
 .dockerignore
@@ -13,3 +14,8 @@ README.md
 
 **/*/__pycache__
 **/*/__init__.py
+
+benchmark_beta.py
+benchmark_optimized.py
+
+docs/**
