@@ -1,9 +1,9 @@
 import os
 import tempfile
-import subprocess
 import shutil
+from concurrent.futures import ThreadPoolExecutor
 
-from fastapi import APIRouter, File, UploadFile
+from fastapi import APIRouter, File, UploadFile, BackgroundTasks
 from fastapi.responses import JSONResponse, StreamingResponse
 
 router = APIRouter()
@@ -22,46 +22,35 @@ def iterFile(file_path: str, temp_dir: str):
             shutil.rmtree(temp_dir, ignore_errors=True)
 
 @router.post("/compose")
-async def compose_movie(image: UploadFile = File(...), video: UploadFile = File(...)):
-    temp_dir = tempfile.mkdtemp()  # 一時ディレクトリを作成
+async def compose_movie(background_tasks: BackgroundTasks, image: UploadFile = File(...), video: UploadFile = File(...)):
     try:
-        image_ext = os.path.splitext(image.filename)[1]         # 画像ファイルの拡張子を取得
-        video_ext = os.path.splitext(video.filename)[1]         # 動画ファイルの拡張子を取得
+        # 一時ディレクトリを手動で作成し、バックグラウンドタスクで削除を予約
+        temp_dir = tempfile.mkdtemp()
+        background_tasks.add_task(shutil.rmtree, temp_dir)
 
-        image_path = os.path.join(temp_dir, f"background{image_ext}")
-        video_path = os.path.join(temp_dir, f"input{video_ext}")
-        output_path = os.path.join(temp_dir, "output.mp4")
-
-        # 一時保存
-        with open(image_path, "wb") as f:
-            f.write(await image.read())
-        with open(video_path, "wb") as f:
-            f.write(await video.read())
-
-        # ffmpegコマンドで合成
-        ffmpeg_cmd = [
-            "ffmpeg", "-y",
-            "-i", video_path, 
-            "-loop", "1" , "-i", image_path,
-            "-filter_complex", 
-            "[0:v]hqdn3d,format=rgba,colorkey=0x00FF00:0.28:0.1[ck];[1:v][ck]scale2ref=iw:ih[bg][fg];[bg][fg]overlay=0:0:format=auto[out]",
-            "-map", "[out]", "-map", "0:a?",
-            "-c:v", "libx264", "-preset", "ultrafast", "-crf", "23",
-            "-c:a", "aac",
-            "-shortest",
-            "-movflags", "+faststart",
-            output_path
-        ]
-
-        ## ffmpegを実行(標準出力と標準エラーをログ出力)
         try:
-            result = subprocess.run(ffmpeg_cmd, check=True, stdout=subprocess.PIPE, stderr=subprocess.PIPE, text=True)
-            print("stdout:", result.stdout)
-            print("stderr:", result.stderr)
-        except subprocess.CalledProcessError as e:
-            print("stdout: e.stdout")
-            print("stderr: e.stderr")
-            return JSONResponse(content={"error": f"FFmpeg error: {e.stderr}"}, status_code=500)
+            image_path = await save_temp_file(image, temp_dir, image.filename)
+            video_path = await save_temp_file(video, temp_dir, video.filename)
+            print("tempファイル作成")
+            try:
+                clip_input = VideoFileClip(video_path)
+            except OSError as e:
+                print(f"動画が開けませんでした: {e}")
+                clip_input = None
+
+            print("動画合成開始")
+            processed_video_path = process_video(temp_dir, image_path, video_path)
+
+            # 音声トラックを動画に追加
+            if clip_input and clip_input.audio:
+                try:
+                    print("音声合成開始")
+                    synthesize_audio_file(clip_input, temp_dir, processed_video_path)
+
+                    # 音声ありの動画をレスポンスとして返す
+                    return StreamingResponse(open(f"{temp_dir}/synthesized_result.mp4", "rb"), media_type="video/mp4")
+                except Exception as e:
+                    return JSONResponse(content={"error": f"音声追加中にエラーが発生しました: {e}"})
 
         # 出力ファイルが作成されているか確認
         if not os.path.exists(output_path):
@@ -76,4 +65,10 @@ async def compose_movie(image: UploadFile = File(...), video: UploadFile = File(
                                     })
 
     except Exception as e:
+        # エラー発生時は即座に一時ディレクトリを削除（作成されていた場合）
+        if 'temp_dir' in locals() and os.path.exists(temp_dir):
+            shutil.rmtree(temp_dir)
+            
+        print("エラーが発生")
+        print(e)
         return JSONResponse(content={"error": str(e)}, status_code=500)
