@@ -22,31 +22,71 @@ def process_video(temp_dir, image_path, video_path):
         raise ValueError(f"背景画像が読み込めません: {image_path}")
     back= cv2.resize(back, (width, height))
 
-    # 書き出し用のwriteクラスを作成
-    fourcc = cv2.VideoWriter_fourcc(*"mp4v")
     processed_video_path = f"{temp_dir}/result.mp4"
-    writer = cv2.VideoWriter(processed_video_path, fourcc, fps, (width, height), True)
-    if not writer.isOpened():
-        raise IOError("VideoWriterの初期化に失敗しました")
+
+
+    # 書き出し用のwriteクラスを作成
+    # H.264コーデック(avc1)を優先、利用できない場合はmp4vにフォールバック
+    try:
+        fourcc = cv2.VideoWriter_fourcc(*"avc1")
+        writer = cv2.VideoWriter(processed_video_path, fourcc, fps, (width, height), True)
+        if not writer.isOpened():
+            raise IOError("avc1 codec not available")
+    except (IOError, cv2.error):
+        print("avc1コーデックが利用できないため、mp4vを使用します")
+        fourcc = cv2.VideoWriter_fourcc(*"mp4v")
+        writer = cv2.VideoWriter(processed_video_path, fourcc, fps, (width, height), True)
+        if not writer.isOpened():
+            raise IOError("VideoWriterの初期化に失敗しました")
+
+
 
     # 最初のフレームを処理
     output_frame = create_frame(first_frame, back)
     writer.write(output_frame)
 
-    # 残りのフレームを処理
+    # 残りのフレームをバッチ処理で並列化
+    from concurrent.futures import ThreadPoolExecutor
+    
+    BATCH_SIZE = 30  # 1秒分のフレーム(30fps想定)をバッチ処理
+    batch = []
+    
+    def process_batch(frames_batch):
+        """バッチ内のフレームを並列処理"""
+        with ThreadPoolExecutor(max_workers=8) as executor:
+            return list(executor.map(lambda f: create_frame(f, back), frames_batch))
+    
     for frame in frames_iter:
-        output_frame = create_frame(frame, back)
+        batch.append(frame)
         
-        # サイズ/カラー調整 (create_frameがRGBA返す場合)
-        # create_frame内でastype(np.uint8)とサイズ整合性は保証されているはずだが
-        # process_video.pyの元のコードにresize/cvtColorがあったので念の為保持
-        if output_frame.shape[:2] != (height, width):
-            output_frame = cv2.resize(output_frame, (width, height))
-
-        if output_frame.shape[2] == 4:
-            output_frame = cv2.cvtColor(output_frame, cv2.COLOR_BGRA2BGR)
+        if len(batch) >= BATCH_SIZE:
+            # バッチを並列処理
+            output_frames = process_batch(batch)
             
-        writer.write(output_frame)
+            # 処理済みフレームを書き込み
+            for output_frame in output_frames:
+                # サイズ/カラー調整
+                if output_frame.shape[:2] != (height, width):
+                    output_frame = cv2.resize(output_frame, (width, height))
+                
+                if output_frame.shape[2] == 4:
+                    output_frame = cv2.cvtColor(output_frame, cv2.COLOR_BGRA2BGR)
+                
+                writer.write(output_frame)
+            
+            batch = []
+    
+    # 残りのフレームを処理
+    if batch:
+        output_frames = process_batch(batch)
+        for output_frame in output_frames:
+            if output_frame.shape[:2] != (height, width):
+                output_frame = cv2.resize(output_frame, (width, height))
+            
+            if output_frame.shape[2] == 4:
+                output_frame = cv2.cvtColor(output_frame, cv2.COLOR_BGRA2BGR)
+            
+            writer.write(output_frame)
 
     # 書き出し先の動画を開放
     writer.release()
