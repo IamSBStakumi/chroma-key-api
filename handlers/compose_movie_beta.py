@@ -1,8 +1,9 @@
 import os
 import tempfile
+import shutil
 from concurrent.futures import ThreadPoolExecutor
 
-from fastapi import APIRouter, File, UploadFile
+from fastapi import APIRouter, File, UploadFile, BackgroundTasks
 from fastapi.responses import JSONResponse, StreamingResponse
 from moviepy import VideoFileClip
 
@@ -13,10 +14,14 @@ from compositor_beta.process_video_beta import process_video_beta
 router = APIRouter()
 
 @router.post("/compose/beta")
-async def compose_movie_beta(image: UploadFile = File(...), video: UploadFile = File(...)):
+async def compose_movie_beta(background_tasks: BackgroundTasks, image: UploadFile = File(...), video: UploadFile = File(...)):
     try:
         print("ベータ版のAPIが呼び出されました")
-        with tempfile.TemporaryDirectory() as temp_dir:
+        # 一時ディレクトリを手動で作成し、バックグラウンドタスクで削除を予約
+        temp_dir = tempfile.mkdtemp()
+        background_tasks.add_task(shutil.rmtree, temp_dir)
+
+        try:
             image_path = await save_temp_file(image, temp_dir, image.filename)
             video_path = await save_temp_file(video, temp_dir, video.filename)
             print("tempファイル作成")
@@ -47,6 +52,10 @@ async def compose_movie_beta(image: UploadFile = File(...), video: UploadFile = 
                 return JSONResponse(content={"error": "video file not found"})
 
     except Exception as e:
+        # エラー発生時は即座に一時ディレクトリを削除（作成されていた場合）
+        if 'temp_dir' in locals() and os.path.exists(temp_dir):
+            shutil.rmtree(temp_dir)
+            
         print("エラーが発生")
         print(e)
         return JSONResponse(content={"error": str(e)}, status_code=500)
