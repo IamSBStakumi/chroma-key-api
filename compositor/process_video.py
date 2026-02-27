@@ -1,11 +1,25 @@
 import os
+import queue
+import subprocess
+import threading
+from concurrent.futures import ThreadPoolExecutor
 
 import cv2
 
 from compositor.create_frame import create_frame
 from utils.read_video_frames import read_video_frames_and_fps
 
+# Cloud Run / コンテナ環境の実際のCPU数を取得してワーカー数を決定
+_CPU_COUNT = os.cpu_count() or 4
+# CPU数の2倍をワーカー数とする（I/Oウェイトを考慮）。上限は16
+_MAX_WORKERS = min(_CPU_COUNT * 2, 16)
+
+print(f"[起動] CPU数={_CPU_COUNT}, フレーム処理ワーカー数={_MAX_WORKERS}")
+
+
 def process_video(temp_dir, image_path, video_path):
+    """動画にクロマキー合成を施し、合成済みMP4のパスを返す。"""
+
     frames_iter, fps = read_video_frames_and_fps(video_path)
     if fps <= 0:
         fps = 30
@@ -14,118 +28,141 @@ def process_video(temp_dir, image_path, video_path):
         first_frame = next(frames_iter)
     except StopIteration:
         raise ValueError("動画からフレームを取得できません")
-    
+
     height, width = first_frame.shape[:2]
 
     back = cv2.imread(image_path)
     if back is None:
         raise ValueError(f"背景画像が読み込めません: {image_path}")
-    back= cv2.resize(back, (width, height))
+    back = cv2.resize(back, (width, height))
 
     processed_video_path = f"{temp_dir}/result.mp4"
 
-
-    # 書き出し用のwriteクラスを作成
-    # 利用可能なコーデックを順番に試す
-    codecs_to_try = [
-        ("X264", "x264"),  # H.264 (最も互換性が高い)
-        ("H264", "h264"),  # H.264の別名
-        ("mp4v", "mp4v"),  # MPEG-4 (フォールバック)
+    # ========================================
+    # ffmpegをパイプモードで起動
+    # ========================================
+    ffmpeg_cmd = [
+        "ffmpeg",
+        "-y",                          # 上書き許可
+        "-f", "rawvideo",
+        "-vcodec", "rawvideo",
+        "-s", f"{width}x{height}",
+        "-pix_fmt", "bgr24",
+        "-r", f"{fps:.2f}",
+        "-i", "-",                     # 標準入力から受け取る
+        "-c:v", "libx264",
+        "-preset", "veryfast",         # Cloud Run向け: 速度優先プリセット
+        "-tune", "zerolatency",        # レイテンシ最小化チューニング
+        "-crf", "23",                  # 品質（低いほど高品質）
+        "-pix_fmt", "yuv420p",         # ブラウザ(HTML5)互換フォーマット
+        "-threads", str(_CPU_COUNT),   # ffmpegスレッド数をCPU数に合わせる
+        "-movflags", "+faststart",     # moovアトムをファイル先頭に配置（ブラウザ再生必須）
+        processed_video_path,
     ]
-    
-    writer = None
-    used_codec = None
-    
-    for codec_name, codec_code in codecs_to_try:
+
+    try:
+        writer_proc = subprocess.Popen(
+            ffmpeg_cmd, stdin=subprocess.PIPE, stderr=subprocess.PIPE
+        )
+    except FileNotFoundError:
+        raise RuntimeError(
+            "ffmpegがインストールされていません。システムにffmpegをインストールしてください。"
+        )
+
+    # ========================================
+    # 非同期3段パイプライン:
+    #   reader_thread → read_queue
+    #   → ThreadPoolExecutor (create_frame)
+    #   → write_queue → writer_thread → ffmpeg stdin
+    # ========================================
+
+    # OpenCVの内部スレッドは無効化し、Pythonレベルで並列制御する
+    cv2.setNumThreads(0)
+
+    read_queue  = queue.Queue(maxsize=_MAX_WORKERS * 4)
+    write_queue = queue.Queue(maxsize=_MAX_WORKERS * 4)
+
+    reading_complete    = threading.Event()
+    processing_complete = threading.Event()
+
+    print(f"パイプライン設定: ワーカー数={_MAX_WORKERS}, FPS={fps:.2f}")
+
+    # --- 最初のフレームを同期処理（パイプラインの初期化を帯域外で実施）---
+    first_output = create_frame(first_frame, back)
+    writer_proc.stdin.write(first_output.tobytes())
+
+    def async_reader():
+        """フレームを読み込んで read_queue に積む"""
+        frames_read = 0
         try:
-            fourcc = cv2.VideoWriter_fourcc(*codec_code)
-            writer = cv2.VideoWriter(processed_video_path, fourcc, fps, (width, height), True)
-            if writer.isOpened():
-                used_codec = codec_name
-                print(f"使用コーデック: {codec_name}")
-                break
-            else:
-                writer.release()
-        except Exception as e:
-            print(f"{codec_name}コーデック初期化失敗: {e}")
-            continue
-    
-    if not writer or not writer.isOpened():
-        raise IOError("利用可能なVideoWriterコーデックが見つかりません")
+            for frame in frames_iter:
+                read_queue.put(frame)
+                frames_read += 1
+        finally:
+            print(f"読み込み完了: {frames_read}フレーム")
+            reading_complete.set()
 
+    def async_writer():
+        """write_queue から取り出してffmpegのstdinに書き込む"""
+        frames_written = 0
+        while True:
+            try:
+                frame = write_queue.get(timeout=1)
 
+                # 出力サイズ・チャンネル数の保証
+                if frame.shape[:2] != (height, width):
+                    frame = cv2.resize(frame, (width, height))
+                if frame.ndim == 3 and frame.shape[2] == 4:
+                    frame = cv2.cvtColor(frame, cv2.COLOR_BGRA2BGR)
 
-    # 最初のフレームを処理
-    output_frame = create_frame(first_frame, back)
-    writer.write(output_frame)
+                try:
+                    writer_proc.stdin.write(frame.tobytes())
+                except BrokenPipeError:
+                    print("FFmpegのパイプが破損しました。")
+                    break
 
-    # 残りのフレームをバッチ処理で並列化
-    from concurrent.futures import ThreadPoolExecutor
-    import time
-    
-    # OpenCVのスレッド数を明示的に設定
-    cv2.setNumThreads(0)  # 0 = 自動(全コア使用)
-    
-    # バッチサイズをfpsに応じて動的に調整
-    # 低fpsの動画でも並列処理が効くように、最小30フレームを確保
-    BATCH_SIZE = max(30, int(fps * 2))  # 2秒分のフレーム、最小30
-    MAX_WORKERS = 16  # スレッド数を増やしてI/O待機時間をカバー
-    batch = []
-    
-    print(f"並列処理設定: バッチサイズ={BATCH_SIZE}, ワーカー数={MAX_WORKERS}, FPS={fps}")
-    
-    total_frames_processed = 0
-    batch_count = 0
-    
-    def process_batch(frames_batch):
-        """バッチ内のフレームを並列処理"""
-        batch_start = time.time()
-        with ThreadPoolExecutor(max_workers=MAX_WORKERS) as executor:
-            result = list(executor.map(lambda f: create_frame(f, back), frames_batch))
-        batch_time = time.time() - batch_start
-        print(f"バッチ処理: {len(frames_batch)}フレーム, {batch_time:.2f}秒, {len(frames_batch)/batch_time:.1f} FPS")
-        return result
+                frames_written += 1
+                write_queue.task_done()
 
-    
-    for frame in frames_iter:
-        batch.append(frame)
-        
-        if len(batch) >= BATCH_SIZE:
-            # バッチを並列処理
-            batch_count += 1
-            output_frames = process_batch(batch)
-            total_frames_processed += len(batch)
-            
-            # 処理済みフレームを書き込み
-            for output_frame in output_frames:
-                # サイズ/カラー調整
-                if output_frame.shape[:2] != (height, width):
-                    output_frame = cv2.resize(output_frame, (width, height))
-                
-                if output_frame.shape[2] == 4:
-                    output_frame = cv2.cvtColor(output_frame, cv2.COLOR_BGRA2BGR)
-                
-                writer.write(output_frame)
-            
-            batch = []
-    
-    # 残りのフレームを処理
-    if batch:
-        batch_count += 1
-        output_frames = process_batch(batch)
-        total_frames_processed += len(batch)
-        for output_frame in output_frames:
-            if output_frame.shape[:2] != (height, width):
-                output_frame = cv2.resize(output_frame, (width, height))
-            
-            if output_frame.shape[2] == 4:
-                output_frame = cv2.cvtColor(output_frame, cv2.COLOR_BGRA2BGR)
-            
-            writer.write(output_frame)
+            except queue.Empty:
+                if processing_complete.is_set() and write_queue.empty():
+                    break
 
-    print(f"並列処理完了: 合計{total_frames_processed}フレーム, {batch_count}バッチ")
+        print(f"書き込み完了: {frames_written}フレーム")
 
-    # 書き出し先の動画を開放
-    writer.release()
+    reader_thread = threading.Thread(target=async_reader, daemon=True)
+    writer_thread = threading.Thread(target=async_writer, daemon=True)
+    reader_thread.start()
+    writer_thread.start()
+
+    def frame_generator():
+        """read_queue からフレームを取り出すジェネレーター"""
+        while True:
+            try:
+                frame = read_queue.get(timeout=0.1)
+                yield frame
+                read_queue.task_done()
+            except queue.Empty:
+                if reading_complete.is_set() and read_queue.empty():
+                    break
+
+    # ThreadPoolExecutor.map は入力順序と同じ順序で結果を返す
+    total_processed = 0
+    with ThreadPoolExecutor(max_workers=_MAX_WORKERS) as executor:
+        for output_frame in executor.map(
+            lambda f: create_frame(f, back), frame_generator()
+        ):
+            write_queue.put(output_frame)
+            total_processed += 1
+
+    print(f"並列処理完了: 合計{total_processed}フレーム")
+    processing_complete.set()
+
+    reader_thread.join()
+    writer_thread.join()
+
+    # ffmpegへの入力を閉じて終了を待機
+    writer_proc.stdin.close()
+    writer_proc.wait()
 
     return processed_video_path

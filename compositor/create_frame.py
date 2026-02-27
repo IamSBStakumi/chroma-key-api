@@ -1,48 +1,50 @@
-import gc
-    
 import cv2
 import numpy as np
 
-# パラメータ設定
-contrast_adjustment_value = 1.5  # コントラスト調整値
-chroma_key_color = np.uint8([[[0, 255, 0]]])  # クロマキー処理の指定色（緑色）
-chroma_key_threshold = 20  # クロマキー処理の閾値
+# ========================================================
+# モジュールロード時に1回だけ計算する定数（全フレーム共通）
+# ========================================================
+
+# コントラスト調整値
+_CONTRAST_ALPHA = 1.5
+
+# クロマキー色（緑）をHSVに変換してH値を取得
+_CHROMA_KEY_COLOR_BGR = np.uint8([[[0, 255, 0]]])
+_CHROMA_KEY_THRESHOLD = 20
+_hsv_tmp = cv2.cvtColor(_CHROMA_KEY_COLOR_BGR, cv2.COLOR_BGR2HSV)
+_TARGET_H = int(_hsv_tmp[0][0][0])
+
+# HSV閾値の上下限（全フレーム同一値）
+_LOWER_GREEN = np.array([max(_TARGET_H - _CHROMA_KEY_THRESHOLD, 0),   50,  50], dtype=np.uint8)
+_UPPER_GREEN = np.array([min(_TARGET_H + _CHROMA_KEY_THRESHOLD, 179), 255, 255], dtype=np.uint8)
+
+# モルフォロジーカーネル（全フレーム同一）
+_MORPH_KERNEL = cv2.getStructuringElement(cv2.MORPH_ELLIPSE, (5, 5))
+
 
 def create_frame(input_frame, back):
+    """1フレームのクロマキー合成を行う。定数は事前計算済みのモジュール変数を使用。"""
+
     # コントラスト調整
-    contrast_image = cv2.convertScaleAbs(input_frame, alpha=contrast_adjustment_value, beta=0)
+    contrast_image = cv2.convertScaleAbs(input_frame, alpha=_CONTRAST_ALPHA, beta=0)
 
-    # クロマキー処理と二値化
-    hsv_chroma_key_color = cv2.cvtColor(chroma_key_color, cv2.COLOR_BGR2HSV)
-    target_h = hsv_chroma_key_color[0][0][0]
-    lower_h = max(target_h - chroma_key_threshold, 0)
-    upper_h = min(target_h + chroma_key_threshold, 179)
-
-    lower_green = np.array([lower_h, 50, 50])
-    upper_green = np.array([upper_h, 255, 255])
-    
+    # HSV変換 → クロマキーマスク生成
     hsv_image = cv2.cvtColor(contrast_image, cv2.COLOR_BGR2HSV)
-    chroma_key_mask = cv2.inRange(hsv_image, lower_green, upper_green)
+    chroma_key_mask = cv2.inRange(hsv_image, _LOWER_GREEN, _UPPER_GREEN)
 
-    # ノイズ除去
-    kernel = cv2.getStructuringElement(cv2.MORPH_ELLIPSE, (5, 5))
-    clean_mask = cv2.morphologyEx(chroma_key_mask, cv2.MORPH_OPEN, kernel)
-    clean_mask = cv2.morphologyEx(clean_mask, cv2.MORPH_CLOSE, kernel)
+    # ノイズ除去（事前計算済みカーネルを使用）
+    clean_mask = cv2.morphologyEx(chroma_key_mask, cv2.MORPH_OPEN,  _MORPH_KERNEL)
+    clean_mask = cv2.morphologyEx(clean_mask,      cv2.MORPH_CLOSE, _MORPH_KERNEL)
 
-    # アルファマスクの作成
-    alpha_mask = 255 - clean_mask
-    alpha_mask = cv2.GaussianBlur(alpha_mask, (5,5), 0)
+    # アルファマスク（0=背景, 255=前景）+ エッジをぼかす
+    alpha_mask = cv2.GaussianBlur(255 - clean_mask, (5, 5), 0)
 
-    # RGBA画像作成
-    transparent_image = cv2.cvtColor(contrast_image, cv2.COLOR_BGR2BGRA)
-    transparent_image[:, :, 3] = alpha_mask  # アルファチャンネル適用
+    # uint16 整数演算でアルファブレンド（float64より高速）
+    alpha    = alpha_mask[..., None].astype(np.uint16)
+    bg_alpha = np.uint16(255) - alpha
 
-    # 背景と合成
-    alpha = (transparent_image[:, :, 3] / 255.0)[..., None]
-    output_frame = (back * (1 - alpha) + transparent_image[:, :, :3] * alpha).astype(np.uint8)
+    output_16 = (contrast_image.astype(np.uint16) * alpha
+                 + back.astype(np.uint16) * bg_alpha) // 255
 
-    #メモリ開放
-    # del contrast_image, hsv_image, chroma_key_mask, mask_image, transparent_image
-    # gc.collect()
+    return output_16.astype(np.uint8)
 
-    return output_frame
