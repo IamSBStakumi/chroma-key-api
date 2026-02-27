@@ -22,6 +22,7 @@ def synthesize_audio_file(clip_input: VideoFileClip, temp_dir: str, processed_vi
         "-map", "0:v:0",
         "-map", "1:a:0",
         "-shortest",
+        "-movflags", "+faststart",  # moovアトムをファイル先頭に配置（ブラウザ再生必須）
         f"{temp_dir}/synthesized_result.mp4"
     ]
 
